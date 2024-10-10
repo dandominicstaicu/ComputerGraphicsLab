@@ -5,6 +5,13 @@
 
 namespace m1
 {
+    #define NUM_COLORS		(3)
+    #define NUM_OBJECTS		(3)
+
+    #define SPEED_FACTOR	(2.f)
+
+    
+
     class Lab1 : public gfxc::SimpleScene
     {
      public:
@@ -14,6 +21,14 @@ namespace m1
         void Init() override;
 
      private:
+        GLuint colorCase, objectCase;
+		GLfloat clearRed, clearGreen, clearBlue;
+
+        std::string objModel;
+        glm::vec3 objScale;
+
+        GLfloat posX, posY, posZ;
+
         void FrameStart() override;
         void Update(float deltaTimeSeconds) override;
         void FrameEnd() override;
@@ -26,6 +41,8 @@ namespace m1
         void OnMouseBtnRelease(int mouseX, int mouseY, int button, int mods) override;
         void OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY) override;
         void OnWindowResize(int width, int height) override;
+        void changeClearColor();
+        void changeObject();
 
         // TODO(student): Class variables go here
 

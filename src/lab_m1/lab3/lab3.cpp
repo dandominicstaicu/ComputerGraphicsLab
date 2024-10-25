@@ -118,7 +118,10 @@ void Lab3::Update(float deltaTimeSeconds)
     // transform matrix with the matrices you just implemented
     // Remember, the last matrix in the chain will take effect first!
     angularStep += deltaTimeSeconds;
+    modelMatrix *= transform2D::Translate(cx, cy);
     modelMatrix *= transform2D::Rotate(angularStep);
+    modelMatrix *= transform2D::Translate(-cx, -cy);
+
     // modelMatrix *= transform2D::Translate(-400, -250);
 
     RenderMesh2D(meshes["square2"], shaders["VertexColor"], modelMatrix);
@@ -131,7 +134,7 @@ void Lab3::Update(float deltaTimeSeconds)
     modelMatrix *= transform2D::Translate(cx, cy);
     
     scaleX = 1 + sin(angularStep) * 0.5;
-    scaleY = 1 + sin(angularStep) * 0.5;
+    scaleY = 1 + cos(angularStep) * 0.5;
 
     modelMatrix *= transform2D::Scale(scaleX, scaleY);
     modelMatrix *= transform2D::Translate(-cx, -cy);

@@ -97,6 +97,7 @@ void Lab4::Update(float deltaTimeSeconds)
     glViewport(miniViewportArea.x, miniViewportArea.y, miniViewportArea.width, miniViewportArea.height);
 
     // TODO(student): render the scene again, in the new viewport
+    RenderScene();
     DrawCoordinateSystem();
 }
 
@@ -114,6 +115,72 @@ void Lab4::FrameEnd()
 void Lab4::OnInputUpdate(float deltaTime, int mods)
 {
     // TODO(student): Add transformation logic
+    GLfloat movementSpeed = 2.0f * deltaTime;
+
+    if (!window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT)) {
+        if (window->KeyHold(GLFW_KEY_W)) {
+            translateZ -= movementSpeed;
+        }
+
+        if (window->KeyHold(GLFW_KEY_S)) {
+            translateZ += movementSpeed;
+        }
+
+        if (window->KeyHold(GLFW_KEY_A)) {
+            translateX -= movementSpeed;
+        }
+
+        if (window->KeyHold(GLFW_KEY_D)) {
+            translateX += movementSpeed;
+        }
+
+        if (window->KeyHold(GLFW_KEY_R)) {
+            translateY += movementSpeed;
+        }
+
+        if (window->KeyHold(GLFW_KEY_F)) {
+            translateY -= movementSpeed;
+        }
+    }
+
+    GLfloat angularSpeed = 1.0f * deltaTime;
+
+    if (window->KeyHold(GLFW_KEY_1)) {
+        scaleX += angularSpeed;
+        scaleY += angularSpeed;
+        scaleZ += angularSpeed;
+    }
+
+    if (window->KeyHold(GLFW_KEY_2)) {
+        scaleX -= angularSpeed;
+        scaleY -= angularSpeed;
+        scaleZ -= angularSpeed;
+    }
+
+    if (window->KeyHold(GLFW_KEY_3)) {
+        angularStepOX += angularSpeed;
+    }
+
+    if (window->KeyHold(GLFW_KEY_4)) {
+        angularStepOX -= angularSpeed;
+    }
+
+    if (window->KeyHold(GLFW_KEY_5)) {
+        angularStepOY += angularSpeed;
+    }
+
+    if (window->KeyHold(GLFW_KEY_6)) {
+        angularStepOY -= angularSpeed;
+    }
+
+    if (window->KeyHold(GLFW_KEY_7)) {
+        angularStepOZ += angularSpeed;
+    }
+
+    if (window->KeyHold(GLFW_KEY_8)) {
+        angularStepOZ -= angularSpeed;
+    }
+
 
 }
 
@@ -138,6 +205,35 @@ void Lab4::OnKeyPress(int key, int mods)
     }
     
     // TODO(student): Add viewport movement and scaling logic
+    GLfloat viewportMovement = 50.0f;
+
+    if (window->KeyHold(GLFW_KEY_I)) {
+        miniViewportArea.y += viewportMovement;
+    }
+
+    if (window->KeyHold(GLFW_KEY_K)) {
+        miniViewportArea.y -= viewportMovement;
+    }
+
+    if (window->KeyHold(GLFW_KEY_J)) {
+        miniViewportArea.x -= viewportMovement;
+    }
+
+    if (window->KeyHold(GLFW_KEY_L)) {
+        miniViewportArea.x += viewportMovement;
+    }
+
+    GLfloat zoomSpeed = 1.2f;
+
+    if (window->KeyHold(GLFW_KEY_U)) {
+        miniViewportArea.width *= zoomSpeed;
+        miniViewportArea.height *= zoomSpeed;
+    }
+
+    if (window->KeyHold(GLFW_KEY_O)) {
+        miniViewportArea.width /= zoomSpeed;
+        miniViewportArea.height /= zoomSpeed;
+    }
 }
 
 

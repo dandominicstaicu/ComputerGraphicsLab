@@ -37,7 +37,14 @@ namespace m1
         glm::vec3 tank1ColorBottom, tank2ColorBottom;
 
         void GenerateTerrain();  // Function to initialize terrain data
-        void RenderTank(float x, float y, float turretAngle, const glm::vec3 &color);
+      //   void RenderTank(float x, float y, float turretAngle, const glm::vec3 &color);
+        void RenderTank(float x, float y, float turretAngle,
+                       const std::string& trapezoid1Name,
+                       const std::string& trapezoid2Name,
+                       const std::string& turretName,
+                       const std::string& cannonName,
+                       bool mirrored);
+
         void MoveTank(float &x, float &y, int direction, float deltaTimeSeconds);
         void AdjustTankPosition(float &x, float &y);
 

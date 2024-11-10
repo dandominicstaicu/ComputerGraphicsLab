@@ -57,13 +57,13 @@ void Lab3::Init()
     // Initialize angularStep
     angularStep = 0;
 
-    Mesh* square1 = object2D::CreateSquare("square1", corner, squareSide, glm::vec3(1, 0, 0), true);
+    Mesh* square1 = object2D_lab3::CreateSquare("square1", corner, squareSide, glm::vec3(1, 0, 0), true);
     AddMeshToList(square1);
 
-    Mesh* square2 = object2D::CreateSquare("square2", corner, squareSide, glm::vec3(0, 1, 0));
+    Mesh* square2 = object2D_lab3::CreateSquare("square2", corner, squareSide, glm::vec3(0, 1, 0));
     AddMeshToList(square2);
 
-    Mesh* square3 = object2D::CreateSquare("square3", corner, squareSide, glm::vec3(0, 0, 1));
+    Mesh* square3 = object2D_lab3::CreateSquare("square3", corner, squareSide, glm::vec3(0, 0, 1));
     AddMeshToList(square3);
 }
 

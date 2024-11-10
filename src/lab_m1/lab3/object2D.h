@@ -6,7 +6,7 @@
 #include "utils/glm_utils.h"
 
 
-namespace object2D
+namespace object2D_lab3
 {
 
     // Create square with given bottom left corner, length and color

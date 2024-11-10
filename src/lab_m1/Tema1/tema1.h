@@ -27,12 +27,19 @@ namespace m1
         void OnWindowResize(int width, int height) override;
 
      protected:
-        float cx, cy; // Tank's center coordinates
         glm::mat3 modelMatrix;
         std::vector<float> heightMap; // Terrain height map
 
-        float tankX, tankY;  // Tank position coordinates
+        float tank1X, tank1Y, tank2X, tank2Y;
+        float tank1TurretAngle, tank2TurretAngle;
+        float tankSpeed;
+        glm::vec3 tank1Color, tank2Color;
+        glm::vec3 tank1ColorBottom, tank2ColorBottom;
 
         void GenerateTerrain();  // Function to initialize terrain data
+        void RenderTank(float x, float y, float turretAngle, const glm::vec3 &color);
+        void MoveTank(float &x, float &y, int direction, float deltaTimeSeconds);
+        void AdjustTankPosition(float &x, float &y);
+
     };
 }   // namespace m1

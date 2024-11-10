@@ -1,8 +1,8 @@
 #include "tema1.h"
 #include <vector>
 #include <iostream>
-#include "lab_m1/lab3/transform2D.h"
-#include "lab_m1/lab3/object2D.h"
+#include "lab_m1/Tema1/transform2D.h"
+#include "lab_m1/Tema1/object2D.h"
 
 using namespace std;
 using namespace m1;
@@ -25,20 +25,44 @@ void Tema1::Init()
     camera->Update();
     GetCameraInput()->SetActive(false);
 
-    // Initialize tank position (for now, static)
-    tankX = resolution.x / 2.0f;
-    tankY = resolution.y / 3.0f;
+    // Initialize tank properties
+    tank1X = resolution.x * 0.25f;
+    tank2X = resolution.x * 0.75f;
+    tankSpeed = 100.0f;
+    tank1Color = glm::vec3(0.8f, 0.68f, 0.53f); // Red tank
+    tank1ColorBottom = glm::vec3(0.45f, 0.39f, 0.30f); // Red tank
+    
+    tank2Color = glm::vec3(0.0f, 0.0f, 0.8f); // Blue tank
+    tank1TurretAngle = 0.0f;
+    tank2TurretAngle = 0.0f;
 
     // Generate terrain data
     GenerateTerrain();
 
-    // Create a simple tank model (e.g., a square or rectangle)
-    glm::vec3 corner = glm::vec3(0, 0, 0);
-    float tankSize = 50.0f;
+    // Initial tank positions based on terrain
+    // Create tank meshes and add them to the list once
+    // Mesh* trapezoid1 = object2D::CreateSquare("trapezoid1", glm::vec3(-20, -10, 0), 40, tank1Color, true);
+    // AddMeshToList(trapezoid1);
 
-    // Create and add tank mesh
-    Mesh* tank = object2D::CreateSquare("tank", corner, tankSize, glm::vec3(0.2f, 0.7f, 0.2f), true);
-    AddMeshToList(tank);
+    // Mesh* trapezoid2 = object2D::CreateSquare("trapezoid2", glm::vec3(-30, -10, 0), 60, tank1Color, true);
+    // AddMeshToList(trapezoid2);
+
+    Mesh* trapezoid1 = object2D::CreateTrapezoid("trapezoid1", glm::vec3(-15, -10, 0), 80, 100, 20, tank1Color);  // Bottom trapezoid
+    AddMeshToList(trapezoid1);
+    Mesh* trapezoid2 = object2D::CreateTrapezoid("trapezoid2", glm::vec3(0, 10, 0), 60, 70, 12, tank1ColorBottom);
+    AddMeshToList(trapezoid2);
+
+
+    glm::vec3 turretCenter = glm::vec3(35, 10, 0);  // Replace with desired center
+    Mesh* turret = object2D::CreateCircle("turret", turretCenter, 15, tank1Color, true, 30);
+    AddMeshToList(turret);
+
+    // Create a cannon rectangle mesh
+    glm::vec3 cannonCenter = glm::vec3(0, 0, 0);  // Replace with desired center
+    Mesh* cannon = object2D::CreateRectangle("cannon", cannonCenter, 20, 5, glm::vec3(0.22f, 0.22f, 0.23f), true);
+    AddMeshToList(cannon);
+
+
 
     glm::vec3 groundColor = glm::vec3(0.83f, 0.87f, 0.12f);
     Mesh* terrainQuad = object2D::CreateSquare("terrainQuad", glm::vec3(0, 0, 0), 1.0f, groundColor, true);
@@ -65,6 +89,48 @@ void Tema1::GenerateTerrain()
                        amplitude2 * sin(frequency2 * t) +
                        amplitude3 * sin(frequency3 * t);
     }
+}
+
+void Tema1::AdjustTankPosition(float &x, float &y)
+{
+    int ix = static_cast<int>(x);
+    if (ix >= 0 && ix < heightMap.size()) {
+        float terrainHeight = heightMap[ix] + 235.0f;  // Use terrain height + offset
+        y = terrainHeight + 25.0f;  // Add a small offset to position tank above the terrain
+    }
+}
+
+void Tema1::MoveTank(float &x, float &y, int direction, float deltaTimeSeconds)
+{
+    x += direction * tankSpeed * deltaTimeSeconds;
+    AdjustTankPosition(x, y);
+}
+
+void Tema1::RenderTank(float x, float y, float turretAngle, const glm::vec3 &color)
+{
+    glm::mat3 modelMatrix = glm::mat3(1);
+
+    // Render the top trapezoid (larger part of the tank base)
+    modelMatrix *= transform2D::Translate(x, y);
+    RenderMesh2D(meshes["trapezoid1"], shaders["VertexColor"], modelMatrix);
+
+    // Render the bottom trapezoid (smaller, flipped, and centered with respect to the top trapezoid)
+    modelMatrix = glm::mat3(1);
+    modelMatrix *= transform2D::Translate(x, y);    // Position it below trapezoid1
+    modelMatrix *= transform2D::Scale(1, -1);       // Flip vertically
+    RenderMesh2D(meshes["trapezoid2"], shaders["VertexColor"], modelMatrix);
+
+    // Render the turret
+    modelMatrix = glm::mat3(1);
+    modelMatrix *= transform2D::Translate(x, y);  // Adjust y-position for turret placement
+    RenderMesh2D(meshes["turret"], shaders["VertexColor"], modelMatrix);
+
+    // Render the cannon with rotation around the turret
+    modelMatrix = glm::mat3(1);
+    modelMatrix *= transform2D::Translate(x + 35, y + 11);  // Place cannon at the top of the turret (same as turret center)
+    modelMatrix *= transform2D::Rotate(turretAngle);   // Apply turret angle rotation
+    modelMatrix *= transform2D::Translate(15, 0);      // Offset cannon outward from turret center
+    RenderMesh2D(meshes["cannon"], shaders["VertexColor"], modelMatrix);
 }
 
 void Tema1::FrameStart()
@@ -98,11 +164,11 @@ void Tema1::Update(float deltaTimeSeconds)
         RenderMesh2D(meshes["terrainQuad"], shaders["VertexColor"], modelMatrix);
     }
 
-    // Render the tank on top of the terrain
-    modelMatrix = glm::mat3(1);
-    modelMatrix *= transform2D::Translate(tankX, tankY);
+    // Ensure tank is positioned above the terrain
+    AdjustTankPosition(tank1X, tank1Y);
 
-    RenderMesh2D(meshes["tank"], shaders["VertexColor"], modelMatrix);
+    // Render tanks
+    RenderTank(tank1X, tank1Y, tank1TurretAngle, tank1Color);
 }
 
 
@@ -112,6 +178,21 @@ void Tema1::FrameEnd()
 
 void Tema1::OnInputUpdate(float deltaTime, int mods)
 {
+    // Tank 1 movement (WASD)
+    if (window->KeyHold(GLFW_KEY_A)) MoveTank(tank1X, tank1Y, -1, deltaTime);
+    if (window->KeyHold(GLFW_KEY_D)) MoveTank(tank1X, tank1Y, 1, deltaTime);
+    if (window->KeyHold(GLFW_KEY_W)) tank1TurretAngle += deltaTime;
+    if (window->KeyHold(GLFW_KEY_S)) tank1TurretAngle -= deltaTime;
+
+    // Tank 2 movement (Arrow Keys)
+    if (window->KeyHold(GLFW_KEY_LEFT)) MoveTank(tank2X, tank2Y, -1, deltaTime);
+    if (window->KeyHold(GLFW_KEY_RIGHT)) MoveTank(tank2X, tank2Y, 1, deltaTime);
+    if (window->KeyHold(GLFW_KEY_UP)) tank2TurretAngle += deltaTime;
+    if (window->KeyHold(GLFW_KEY_DOWN)) tank2TurretAngle -= deltaTime;
+
+    // Keep tanks on terrain
+    AdjustTankPosition(tank1X, tank1Y);
+    AdjustTankPosition(tank2X, tank2Y);
 }
 
 void Tema1::OnKeyPress(int key, int mods)

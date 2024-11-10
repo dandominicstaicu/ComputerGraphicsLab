@@ -42,7 +42,7 @@ void Lab3_Vis2D::Init()
     glm::vec3 corner = glm::vec3(0.001, 0.001, 0);
     length = 0.99f;
 
-    Mesh* square1 = object2D::CreateSquare("square1", corner, length, glm::vec3(1, 0, 0));
+    Mesh* square1 = object2D_lab3::CreateSquare("square1", corner, length, glm::vec3(1, 0, 0));
     AddMeshToList(square1);
 }
 

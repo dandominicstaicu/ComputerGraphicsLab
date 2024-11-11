@@ -37,11 +37,11 @@ void Tema1::Init()
 
     tank1Color = glm::vec3(0.8f, 0.68f, 0.53f); // Left tank
     tank1ColorBottom = glm::vec3(0.45f, 0.39f, 0.30f); // Left tank
-    tank1TurretAngle = 0.0f;
+    tank1TurretAngle = 1.0f;
 
     tank2Color = glm::vec3(0.62f, 0.73f, 0.45f); // Right tank
     tank2ColorBottom = glm::vec3(0.32f, 0.38f, 0.19f); // Right tank
-    tank2TurretAngle = 0.0f;
+    tank2TurretAngle = 1.0f;
 
     // Generate terrain data
     GenerateTerrain();
@@ -52,15 +52,6 @@ void Tema1::Init()
     glm::vec3 cannonColor = glm::vec3(0.22f, 0.22f, 0.23f);
 
     // Create meshes for Tank 1
-    // Mesh* trapezoid1_tank1 = object2D::CreateTrapezoid("trapezoid1_tank1", glm::vec3(-15, -10, 0), 80, 100, 20, tank1Color);
-    // AddMeshToList(trapezoid1_tank1);
-    // Mesh* trapezoid2_tank1 = object2D::CreateTrapezoid("trapezoid2_tank1", glm::vec3(0, 10, 0), 60, 70, 12, tank1ColorBottom);
-    // AddMeshToList(trapezoid2_tank1);
-    // Mesh* turret_tank1 = object2D::CreateCircle("turret_tank1", glm::vec3(35, 10, 0), 15, tank1Color, true, 30);
-    // AddMeshToList(turret_tank1);
-    // Mesh* cannon_tank1 = object2D::CreateRectangle("cannon_tank1", glm::vec3(0, 0, 0), 20, 5, cannonColor, true);
-    // AddMeshToList(cannon_tank1);
-
     Mesh* trapezoid1_tank1 = object2D::CreateTrapezoid("trapezoid1_tank1",
         glm::vec3(-40, 0, 0), // Adjusted so that the tank's base is at (0, 0)
         80, // widthTop
@@ -92,16 +83,7 @@ void Tema1::Init()
     AddMeshToList(cannon_tank1);
 
     // Create meshes for Tank 2
-    // Mesh* trapezoid1_tank2 = object2D::CreateTrapezoid("trapezoid1_tank2", glm::vec3(-15, -10, 0), 80, 100, 20, tank2Color);
-    // AddMeshToList(trapezoid1_tank2);
-    // Mesh* trapezoid2_tank2 = object2D::CreateTrapezoid("trapezoid2_tank2", glm::vec3(0, 10, 0), 60, 70, 12, tank2ColorBottom);
-    // AddMeshToList(trapezoid2_tank2);
-    // Mesh* turret_tank2 = object2D::CreateCircle("turret_tank2", glm::vec3(35, 10, 0), 15, tank2Color, true, 30);
-    // AddMeshToList(turret_tank2);
-    // Mesh* cannon_tank2 = object2D::CreateRectangle("cannon_tank2", glm::vec3(0, 0, 0), 20, 5, cannonColor, true);
-    // AddMeshToList(cannon_tank2);
-
-        Mesh* trapezoid1_tank2 = object2D::CreateTrapezoid("trapezoid1_tank2",
+    Mesh* trapezoid1_tank2 = object2D::CreateTrapezoid("trapezoid1_tank2",
         glm::vec3(-40, 0, 0), // Adjusted so that the tank's base is at (0, 0)
         80, // widthTop
         100, // widthBottom
@@ -173,7 +155,7 @@ void Tema1::AdjustTankPosition(float &x, float &y)
     int ix = static_cast<int>(x);
     if (ix >= 0 && ix < heightMap.size()) {
         float terrainHeight = heightMap[ix] + 235.0f;  // Use terrain height + offset
-        y = terrainHeight + 25.0f;  // Add a small offset to position tank above the terrain
+        y = terrainHeight + 11.0f;  // Add a small offset to position tank above the terrain
     }
 }
 

@@ -15,6 +15,10 @@ Tema1::~Tema1()
 {
 }
 
+float clamp(float value, float min, float max) {
+    return (value < min) ? min : (value > max) ? max : value;
+}
+
 void Tema1::Init()
 {
     glm::ivec2 resolution = window->GetResolution();
@@ -48,23 +52,82 @@ void Tema1::Init()
     glm::vec3 cannonColor = glm::vec3(0.22f, 0.22f, 0.23f);
 
     // Create meshes for Tank 1
-    Mesh* trapezoid1_tank1 = object2D::CreateTrapezoid("trapezoid1_tank1", glm::vec3(-15, -10, 0), 80, 100, 20, tank1Color);
+    // Mesh* trapezoid1_tank1 = object2D::CreateTrapezoid("trapezoid1_tank1", glm::vec3(-15, -10, 0), 80, 100, 20, tank1Color);
+    // AddMeshToList(trapezoid1_tank1);
+    // Mesh* trapezoid2_tank1 = object2D::CreateTrapezoid("trapezoid2_tank1", glm::vec3(0, 10, 0), 60, 70, 12, tank1ColorBottom);
+    // AddMeshToList(trapezoid2_tank1);
+    // Mesh* turret_tank1 = object2D::CreateCircle("turret_tank1", glm::vec3(35, 10, 0), 15, tank1Color, true, 30);
+    // AddMeshToList(turret_tank1);
+    // Mesh* cannon_tank1 = object2D::CreateRectangle("cannon_tank1", glm::vec3(0, 0, 0), 20, 5, cannonColor, true);
+    // AddMeshToList(cannon_tank1);
+
+    Mesh* trapezoid1_tank1 = object2D::CreateTrapezoid("trapezoid1_tank1",
+        glm::vec3(-40, 0, 0), // Adjusted so that the tank's base is at (0, 0)
+        80, // widthTop
+        100, // widthBottom
+        20, // height
+        tank1Color);
     AddMeshToList(trapezoid1_tank1);
-    Mesh* trapezoid2_tank1 = object2D::CreateTrapezoid("trapezoid2_tank1", glm::vec3(0, 10, 0), 60, 70, 12, tank1ColorBottom);
+
+    Mesh* trapezoid2_tank1 = object2D::CreateTrapezoid("trapezoid2_tank1",
+        glm::vec3(-18, -12, 0), // Adjusted position
+        70, // widthTop
+        60, // widthBottom
+        12, // height
+        tank1ColorBottom);
     AddMeshToList(trapezoid2_tank1);
-    Mesh* turret_tank1 = object2D::CreateCircle("turret_tank1", glm::vec3(35, 10, 0), 15, tank1Color, true, 30);
+
+    Mesh* turret_tank1 = object2D::CreateCircle("turret_tank1",
+        glm::vec3(11, 20, 0), // Turret center relative to tank's base
+        15, // radius
+        tank1Color, true, 30);
     AddMeshToList(turret_tank1);
-    Mesh* cannon_tank1 = object2D::CreateRectangle("cannon_tank1", glm::vec3(0, 0, 0), 20, 5, cannonColor, true);
+
+    // Create the cannon mesh centered at the origin
+    Mesh* cannon_tank1 = object2D::CreateRectangle("cannon_tank1",
+        glm::vec3(0, -2.5f, 0), // Centered horizontally at origin, vertically from -2.5 to +2.5
+        30, // width (length of the cannon)
+        5,  // height
+        cannonColor, true);
     AddMeshToList(cannon_tank1);
 
     // Create meshes for Tank 2
-    Mesh* trapezoid1_tank2 = object2D::CreateTrapezoid("trapezoid1_tank2", glm::vec3(-15, -10, 0), 80, 100, 20, tank2Color);
+    // Mesh* trapezoid1_tank2 = object2D::CreateTrapezoid("trapezoid1_tank2", glm::vec3(-15, -10, 0), 80, 100, 20, tank2Color);
+    // AddMeshToList(trapezoid1_tank2);
+    // Mesh* trapezoid2_tank2 = object2D::CreateTrapezoid("trapezoid2_tank2", glm::vec3(0, 10, 0), 60, 70, 12, tank2ColorBottom);
+    // AddMeshToList(trapezoid2_tank2);
+    // Mesh* turret_tank2 = object2D::CreateCircle("turret_tank2", glm::vec3(35, 10, 0), 15, tank2Color, true, 30);
+    // AddMeshToList(turret_tank2);
+    // Mesh* cannon_tank2 = object2D::CreateRectangle("cannon_tank2", glm::vec3(0, 0, 0), 20, 5, cannonColor, true);
+    // AddMeshToList(cannon_tank2);
+
+        Mesh* trapezoid1_tank2 = object2D::CreateTrapezoid("trapezoid1_tank2",
+        glm::vec3(-40, 0, 0), // Adjusted so that the tank's base is at (0, 0)
+        80, // widthTop
+        100, // widthBottom
+        20, // height
+        tank2Color);
     AddMeshToList(trapezoid1_tank2);
-    Mesh* trapezoid2_tank2 = object2D::CreateTrapezoid("trapezoid2_tank2", glm::vec3(0, 10, 0), 60, 70, 12, tank2ColorBottom);
+
+    Mesh* trapezoid2_tank2 = object2D::CreateTrapezoid("trapezoid2_tank2",
+        glm::vec3(-18, -12, 0), // Adjusted position
+        70, // widthTop
+        60, // widthBottom
+        12, // height
+        tank2ColorBottom);
     AddMeshToList(trapezoid2_tank2);
-    Mesh* turret_tank2 = object2D::CreateCircle("turret_tank2", glm::vec3(35, 10, 0), 15, tank2Color, true, 30);
+
+    Mesh* turret_tank2 = object2D::CreateCircle("turret_tank2",
+        glm::vec3(11, 20, 0), // Turret center relative to tank's base
+        15, // radius
+        tank2Color, true, 30);
     AddMeshToList(turret_tank2);
-    Mesh* cannon_tank2 = object2D::CreateRectangle("cannon_tank2", glm::vec3(0, 0, 0), 20, 5, cannonColor, true);
+
+    Mesh* cannon_tank2 = object2D::CreateRectangle("cannon_tank2",
+        glm::vec3(0, 0, 0), // Centered around the turret center
+        30, // width
+        5, // height
+        cannonColor, true);
     AddMeshToList(cannon_tank2);
 
 
@@ -120,7 +183,7 @@ void Tema1::MoveTank(float &x, float &y, int direction, float deltaTimeSeconds)
     AdjustTankPosition(x, y);
 }
 
-void Tema1::RenderTank(float x, float y, float turretAngle,
+void Tema1::RenderTank(float x, float y, float turretAngle, float bodyAngle,
                        const std::string& trapezoid1Name,
                        const std::string& trapezoid2Name,
                        const std::string& turretName,
@@ -129,33 +192,35 @@ void Tema1::RenderTank(float x, float y, float turretAngle,
 {
     glm::mat3 modelMatrix = glm::mat3(1);
 
-    // Apply translation
+    // Apply translation to tank position
     modelMatrix *= transform2D::Translate(x, y);
+
+    // Apply body rotation around the tank's base (which is at (0, 0) in local coordinates)
+    modelMatrix *= transform2D::Rotate(bodyAngle);
 
     // Apply mirroring if needed
     if (mirrored) {
         modelMatrix *= transform2D::Scale(-1, 1);
     }
 
-    // Render the top trapezoid (larger part of the tank base)
+    // Render the tank body (top trapezoid)
     RenderMesh2D(meshes[trapezoid1Name], shaders["VertexColor"], modelMatrix);
 
-    // Render the bottom trapezoid (smaller, flipped, and centered with respect to the top trapezoid)
-    glm::mat3 modelMatrixBottom = modelMatrix;
-    modelMatrixBottom *= transform2D::Scale(1, -1); // Flip vertically
-    RenderMesh2D(meshes[trapezoid2Name], shaders["VertexColor"], modelMatrixBottom);
+    // Render the tank lower part (bottom trapezoid)
+    RenderMesh2D(meshes[trapezoid2Name], shaders["VertexColor"], modelMatrix);
 
     // Render the turret
     glm::mat3 modelMatrixTurret = modelMatrix;
     RenderMesh2D(meshes[turretName], shaders["VertexColor"], modelMatrixTurret);
 
-    // Render the cannon with rotation around the turret
+    // Render the cannon with rotation around the turret center
     glm::mat3 modelMatrixCannon = modelMatrix;
-    modelMatrixCannon *= transform2D::Translate(35, 11); // Place cannon at the top of the turret
-    modelMatrixCannon *= transform2D::Rotate(turretAngle); // Apply turret angle rotation
-    modelMatrixCannon *= transform2D::Translate(15, 0); // Offset cannon outward from turret center
+    modelMatrixCannon *= transform2D::Translate(11, 20);     // Move to the turret center
+    modelMatrixCannon *= transform2D::Rotate(turretAngle);   // Rotate around the turret center
+    modelMatrixCannon *= transform2D::Translate(0, 0);       // No additional translation needed
     RenderMesh2D(meshes[cannonName], shaders["VertexColor"], modelMatrixCannon);
 }
+
 
 
 void Tema1::FrameStart()
@@ -192,13 +257,32 @@ void Tema1::Update(float deltaTimeSeconds)
     AdjustTankPosition(tank1X, tank1Y);
     AdjustTankPosition(tank2X, tank2Y);
 
+    // Compute tank1 angle based on terrain slope
+    int ix1 = static_cast<int>(tank1X);
+    if (ix1 > 0 && ix1 < terrainWidth - 1) {
+        float deltaHeight = heightMap[ix1 + 1] - heightMap[ix1 - 1];
+        float deltaX = 2.0f;  // Difference in x positions
+        float slope = deltaHeight / deltaX;
+        tank1Angle = atan(slope);
+    }
+
+    // Compute tank2 angle based on terrain slope
+    int ix2 = static_cast<int>(tank2X);
+    if (ix2 > 0 && ix2 < terrainWidth - 1) {
+        float deltaHeight = heightMap[ix2 + 1] - heightMap[ix2 - 1];
+        float deltaX = 2.0f;
+        float slope = deltaHeight / deltaX;
+        tank2Angle = atan(slope);
+    }
+
+
     // Render Tank 1
-    RenderTank(tank1X, tank1Y, tank1TurretAngle,
+    RenderTank(tank1X, tank1Y, tank1TurretAngle, tank1Angle,
                "trapezoid1_tank1", "trapezoid2_tank1",
                "turret_tank1", "cannon_tank1", false);
 
     // Render Tank 2 (mirrored)
-    RenderTank(tank2X, tank2Y, tank2TurretAngle,
+    RenderTank(tank2X, tank2Y, tank2TurretAngle, tank2Angle,
                "trapezoid1_tank2", "trapezoid2_tank2",
                "turret_tank2", "cannon_tank2", true);
 }
@@ -216,11 +300,17 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
     if (window->KeyHold(GLFW_KEY_W)) tank1TurretAngle += deltaTime;
     if (window->KeyHold(GLFW_KEY_S)) tank1TurretAngle -= deltaTime;
 
+    // Clamp turret angle between 0 and PI (0 to 180 degrees)
+    tank1TurretAngle = clamp(tank1TurretAngle, 0.0f, PI);
+
     // Tank 2 movement (Arrow Keys)
     if (window->KeyHold(GLFW_KEY_LEFT)) MoveTank(tank2X, tank2Y, -1, deltaTime);
     if (window->KeyHold(GLFW_KEY_RIGHT)) MoveTank(tank2X, tank2Y, 1, deltaTime);
     if (window->KeyHold(GLFW_KEY_UP)) tank2TurretAngle += deltaTime;
     if (window->KeyHold(GLFW_KEY_DOWN)) tank2TurretAngle -= deltaTime;
+
+    // Clamp turret angle between 0 and PI (0 to 180 degrees)
+    tank2TurretAngle = clamp(tank2TurretAngle, 0.0f, PI);
 
     // Keep tanks on terrain
     AdjustTankPosition(tank1X, tank1Y);

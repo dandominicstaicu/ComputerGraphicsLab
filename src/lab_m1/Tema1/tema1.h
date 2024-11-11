@@ -35,10 +35,19 @@ namespace m1
         float tankSpeed;
         glm::vec3 tank1Color, tank2Color;
         glm::vec3 tank1ColorBottom, tank2ColorBottom;
+        float tank1Angle, tank2Angle; // Angles to align tanks with terrain
+        
+        
 
         void GenerateTerrain();  // Function to initialize terrain data
       //   void RenderTank(float x, float y, float turretAngle, const glm::vec3 &color);
-        void RenderTank(float x, float y, float turretAngle,
+      //   void RenderTank(float x, float y, float turretAngle,
+      //                  const std::string& trapezoid1Name,
+      //                  const std::string& trapezoid2Name,
+      //                  const std::string& turretName,
+      //                  const std::string& cannonName,
+      //                  bool mirrored);
+      void RenderTank(float x, float y, float turretAngle, float bodyAngle,
                        const std::string& trapezoid1Name,
                        const std::string& trapezoid2Name,
                        const std::string& turretName,

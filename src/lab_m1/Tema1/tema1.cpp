@@ -120,6 +120,33 @@ void Tema1::Init()
     glm::vec3 groundColor = glm::vec3(0.83f, 0.87f, 0.12f);
     Mesh* terrainQuad = object2D::CreateSquare("terrainQuad", glm::vec3(0, 0, 0), 1.0f, groundColor, true);
     AddMeshToList(terrainQuad);
+
+    maxHealth = 100.0f;
+    tank1Health = maxHealth;
+    tank2Health = maxHealth;
+    tank1Alive = true;
+    tank2Alive = true;
+
+    // Initialize collision detection parameters
+    projectileCollisionRadius = 3.0f;  // Same as projectile radius
+    tankCollisionRadius = 30.0f;       // Adjust based on tank size
+    damagePerHit = 20.0f;
+
+    // Health bar dimensions
+    healthBarWidth = 50.0f;
+    healthBarHeight = 5.0f;
+
+    // Create filled health bar mesh
+    Mesh* healthBarFull = object2D::CreateRectangle("healthBarFull", glm::vec3(0, 0, 0),
+                                                    healthBarWidth, healthBarHeight,
+                                                    glm::vec3(0.0f, 1.0f, 0.0f), true);
+    AddMeshToList(healthBarFull);
+
+    // Create health bar border (wireframe)
+    Mesh* healthBarBorder = object2D::CreateRectangle("healthBarBorder", glm::vec3(0, 0, 0),
+                                                      healthBarWidth, healthBarHeight,
+                                                      glm::vec3(0.0f, 0.0f, 0.0f), false);
+    AddMeshToList(healthBarBorder);
 }
 
 void Tema1::GenerateTerrain()
@@ -290,23 +317,65 @@ void Tema1::Update(float deltaTimeSeconds)
     }
 
 
-    // Render Tank 1
-    RenderTank(tank1X, tank1Y, tank1TurretAngle, tank1Angle,
-               "trapezoid1_tank1", "trapezoid2_tank1",
-               "turret_tank1", "cannon_tank1", false);
+    if (tank1Alive) {
+        // Render Tank 1
+        RenderTank(tank1X, tank1Y, tank1TurretAngle, tank1Angle,
+                   "trapezoid1_tank1", "trapezoid2_tank1",
+                   "turret_tank1", "cannon_tank1", false);
+    }
 
-    // Render Tank 2 (mirrored)
-    RenderTank(tank2X, tank2Y, tank2TurretAngle, tank2Angle,
-           "trapezoid1_tank2", "trapezoid2_tank2",
-           "turret_tank2", "cannon_tank2", false /* cannonPointsLeft */);
-
+    if (tank2Alive) {
+        // Render Tank 2
+        RenderTank(tank2X, tank2Y, tank2TurretAngle, tank2Angle,
+               "trapezoid1_tank2", "trapezoid2_tank2",
+               "turret_tank2", "cannon_tank2", false /* cannonPointsLeft */);
+    }
+    
     for (auto it = projectiles.begin(); it != projectiles.end(); ) {
         it->position += it->velocity * deltaTimeSeconds;
         it->velocity += gravity * deltaTimeSeconds; // Apply gravity
         it->lifespan -= deltaTimeSeconds;
 
-        // Remove projectile if it has expired
-        if (it->lifespan <= 0) {
+        bool collisionDetected = false;
+
+        // Check collision with Tank 1
+        if (tank1Alive) {
+            float dx1 = it->position.x - tank1X;
+            float dy1 = it->position.y - tank1Y;
+            float distance1 = sqrt(dx1 * dx1 + dy1 * dy1);
+            if (distance1 < (projectileCollisionRadius + tankCollisionRadius)) {
+                // Collision with Tank 1
+                tank1Health -= damagePerHit;
+                collisionDetected = true;
+
+                if (tank1Health <= 0) {
+                    tank1Health = 0;
+                    tank1Alive = false;
+                    // Optional: Add explosion effect or sound
+                }
+            }
+        }
+
+        // Check collision with Tank 2
+        if (tank2Alive) {
+            float dx2 = it->position.x - tank2X;
+            float dy2 = it->position.y - tank2Y;
+            float distance2 = sqrt(dx2 * dx2 + dy2 * dy2);
+            if (distance2 < (projectileCollisionRadius + tankCollisionRadius)) {
+                // Collision with Tank 2
+                tank2Health -= damagePerHit;
+                collisionDetected = true;
+
+                if (tank2Health <= 0) {
+                    tank2Health = 0;
+                    tank2Alive = false;
+                    // Optional: Add explosion effect or sound
+                }
+            }
+        }
+
+        // Remove projectile if it has expired or if it collided
+        if (it->lifespan <= 0 || collisionDetected) {
             it = projectiles.erase(it);
         } else {
             // Render the projectile as a small circle
@@ -315,6 +384,45 @@ void Tema1::Update(float deltaTimeSeconds)
             RenderMesh2D(meshes["projectile"], shaders["VertexColor"], modelMatrix);
             ++it;
         }
+    }
+
+
+    // Render Tank 1 and its health bar
+    if (tank1Alive) {
+        RenderTank(tank1X, tank1Y, tank1TurretAngle, tank1Angle,
+                   "trapezoid1_tank1", "trapezoid2_tank1",
+                   "turret_tank1", "cannon_tank1", false);
+
+        // Render health bar for Tank 1
+        float healthPercentage = tank1Health / maxHealth;
+        glm::mat3 healthBarModelMatrix = glm::mat3(1);
+        healthBarModelMatrix *= transform2D::Translate(tank1X - healthBarWidth / 2.0f, tank1Y + 50.0f);
+
+        // Scale the filled part according to the health
+        glm::mat3 healthBarFullMatrix = healthBarModelMatrix;
+        healthBarFullMatrix *= transform2D::Scale(healthPercentage, 1.0f);
+
+        RenderMesh2D(meshes["healthBarFull"], shaders["VertexColor"], healthBarFullMatrix);
+        RenderMesh2D(meshes["healthBarBorder"], shaders["VertexColor"], healthBarModelMatrix);
+    }
+
+    // Render Tank 2 and its health bar
+    if (tank2Alive) {
+        RenderTank(tank2X, tank2Y, tank2TurretAngle, tank2Angle,
+                   "trapezoid1_tank2", "trapezoid2_tank2",
+                   "turret_tank2", "cannon_tank2", true /* cannonPointsLeft */);
+
+        // Render health bar for Tank 2
+        float healthPercentage = tank2Health / maxHealth;
+        glm::mat3 healthBarModelMatrix = glm::mat3(1);
+        healthBarModelMatrix *= transform2D::Translate(tank2X - healthBarWidth / 2.0f, tank2Y + 50.0f);
+
+        // Scale the filled part according to the health
+        glm::mat3 healthBarFullMatrix = healthBarModelMatrix;
+        healthBarFullMatrix *= transform2D::Scale(healthPercentage, 1.0f);
+
+        RenderMesh2D(meshes["healthBarFull"], shaders["VertexColor"], healthBarFullMatrix);
+        RenderMesh2D(meshes["healthBarBorder"], shaders["VertexColor"], healthBarModelMatrix);
     }
 }
 
@@ -361,13 +469,13 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
 
 void Tema1::OnKeyPress(int key, int mods)
 {
-    if (key == GLFW_KEY_SPACE) {  // Fire from Tank 1
-        glm::vec2 cannonTip = GetCannonTipPosition(tank1X, tank1Y, tank1Angle, tank1TurretAngle, false /* cannonPointsLeft */);
+    if (key == GLFW_KEY_SPACE && tank1Alive) {  // Fire from Tank 1
+        glm::vec2 cannonTip = GetCannonTipPosition(tank1X, tank1Y, tank1Angle, tank1TurretAngle, false);
         float totalAngle = tank1Angle + tank1TurretAngle;
         FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
-    } else if (key == GLFW_KEY_ENTER) {  // Fire from Tank 2
-        glm::vec2 cannonTip = GetCannonTipPosition(tank2X, tank2Y, tank2Angle, tank2TurretAngle, true /* cannonPointsLeft */);
-        float totalAngle = tank2Angle + PI + tank2TurretAngle;  // Adjusted angle for cannon pointing left
+    } else if (key == GLFW_KEY_ENTER && tank2Alive) {  // Fire from Tank 2
+        glm::vec2 cannonTip = GetCannonTipPosition(tank2X, tank2Y, tank2Angle, tank2TurretAngle, true);
+        float totalAngle = tank2Angle + PI + tank2TurretAngle;
         FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
     }
 }

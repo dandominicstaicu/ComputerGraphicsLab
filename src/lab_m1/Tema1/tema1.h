@@ -50,6 +50,20 @@ namespace m1
         };
         std::vector<Projectile> projectiles;  // List to store active projectiles
 
+        float healthBarWidth;
+        float healthBarHeight;
+
+        float maxHealth;
+        float tank1Health;
+        float tank2Health;
+        bool tank1Alive;
+        bool tank2Alive;
+     
+        // Collision detection parameters
+        float projectileCollisionRadius;
+        float tankCollisionRadius;
+        float damagePerHit;  
+
         // Methods
         void GenerateTerrain();  // Function to initialize terrain data
         void RenderTank(float x, float y, float turretAngle, float bodyAngle,

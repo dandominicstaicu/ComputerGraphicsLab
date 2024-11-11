@@ -112,6 +112,9 @@ void Tema1::Init()
         cannonColor, true);
     AddMeshToList(cannon_tank2);
 
+    Mesh* projectileMesh = object2D::CreateCircle("projectile", glm::vec3(0, 0, 0), 3.0f,
+                                              glm::vec3(1.0f, 1.0f, 1.0f), true, 20);
+    AddMeshToList(projectileMesh);
 
 
     glm::vec3 groundColor = glm::vec3(0.83f, 0.87f, 0.12f);
@@ -195,15 +198,47 @@ void Tema1::RenderTank(float x, float y, float turretAngle, float bodyAngle,
     glm::mat3 modelMatrixTurret = modelMatrix;
     RenderMesh2D(meshes[turretName], shaders["VertexColor"], modelMatrixTurret);
 
+    // Adjust turret angle for mirrored tank
+    float adjustedTurretAngle = mirrored ? -turretAngle : turretAngle;
+
     // Render the cannon with rotation around the turret center
     glm::mat3 modelMatrixCannon = modelMatrix;
     modelMatrixCannon *= transform2D::Translate(11, 20);     // Move to the turret center
-    modelMatrixCannon *= transform2D::Rotate(turretAngle);   // Rotate around the turret center
-    modelMatrixCannon *= transform2D::Translate(0, 0);       // No additional translation needed
+    modelMatrixCannon *= transform2D::Rotate(adjustedTurretAngle);   // Rotate around the turret center
     RenderMesh2D(meshes[cannonName], shaders["VertexColor"], modelMatrixCannon);
 }
 
+glm::vec2 Tema1::GetCannonTipPosition(float tankX, float tankY, float tankAngle, float turretAngle, bool mirrored)
+{
+    glm::vec2 localCannonTip = glm::vec2(30.0f, 0.0f);
 
+    glm::mat3 modelMatrix = glm::mat3(1);
+
+    // Apply transformations
+    modelMatrix *= transform2D::Translate(tankX, tankY);
+    modelMatrix *= transform2D::Rotate(tankAngle);
+
+    if (mirrored) {
+        modelMatrix *= transform2D::Scale(-1, 1);
+    }
+
+    modelMatrix *= transform2D::Translate(11, 20);
+
+    float adjustedTurretAngle = mirrored ? -turretAngle : turretAngle;
+    modelMatrix *= transform2D::Rotate(adjustedTurretAngle);
+
+    glm::vec3 worldCannonTip = modelMatrix * glm::vec3(localCannonTip, 1.0f);
+
+    return glm::vec2(worldCannonTip.x, worldCannonTip.y);
+}
+
+void Tema1::FireProjectile(float startX, float startY, float angle) {
+    Projectile p;
+    p.position = glm::vec2(startX, startY);
+    p.velocity = glm::vec2(cos(angle), sin(angle)) * projectileSpeed;
+    p.lifespan = projectileLifespan;
+    projectiles.push_back(p);
+}
 
 void Tema1::FrameStart()
 {
@@ -267,6 +302,23 @@ void Tema1::Update(float deltaTimeSeconds)
     RenderTank(tank2X, tank2Y, tank2TurretAngle, tank2Angle,
                "trapezoid1_tank2", "trapezoid2_tank2",
                "turret_tank2", "cannon_tank2", true);
+
+    for (auto it = projectiles.begin(); it != projectiles.end(); ) {
+        it->position += it->velocity * deltaTimeSeconds;
+        it->velocity += gravity * deltaTimeSeconds; // Apply gravity
+        it->lifespan -= deltaTimeSeconds;
+
+        // Remove projectile if it has expired
+        if (it->lifespan <= 0) {
+            it = projectiles.erase(it);
+        } else {
+            // Render the projectile as a small circle
+            glm::mat3 modelMatrix = glm::mat3(1);
+            modelMatrix *= transform2D::Translate(it->position.x, it->position.y);
+            RenderMesh2D(meshes["projectile"], shaders["VertexColor"], modelMatrix);
+            ++it;
+        }
+    }
 }
 
 
@@ -288,11 +340,22 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
     // Tank 2 movement (Arrow Keys)
     if (window->KeyHold(GLFW_KEY_LEFT)) MoveTank(tank2X, tank2Y, -1, deltaTime);
     if (window->KeyHold(GLFW_KEY_RIGHT)) MoveTank(tank2X, tank2Y, 1, deltaTime);
-    if (window->KeyHold(GLFW_KEY_UP)) tank2TurretAngle += deltaTime;
-    if (window->KeyHold(GLFW_KEY_DOWN)) tank2TurretAngle -= deltaTime;
+    if (window->KeyHold(GLFW_KEY_UP)) tank2TurretAngle -= deltaTime;
+    if (window->KeyHold(GLFW_KEY_DOWN)) tank2TurretAngle += deltaTime;
 
     // Clamp turret angle between 0 and PI (0 to 180 degrees)
     tank2TurretAngle = clamp(tank2TurretAngle, 0.0f, PI);
+
+    // if (window->KeyHold(GLFW_KEY_SPACE)) {  // Fire from Tank 1
+    //     glm::vec2 cannonTip = GetCannonTipPosition(tank1X, tank1Y, tank1Angle, tank1TurretAngle, false);
+    //     float totalAngle = tank1Angle + tank1TurretAngle;
+    //     FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
+    // } else if (window->KeyHold(GLFW_KEY_ENTER)) {  // Fire from Tank 2
+    //     glm::vec2 cannonTip = GetCannonTipPosition(tank2X, tank2Y, tank2Angle, tank2TurretAngle, true);
+    //     float adjustedTurretAngle = -tank2TurretAngle;  // Mirrored
+    //     float totalAngle = tank2Angle + adjustedTurretAngle;
+    //     FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
+    // }
 
     // Keep tanks on terrain
     AdjustTankPosition(tank1X, tank1Y);
@@ -301,6 +364,16 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
 
 void Tema1::OnKeyPress(int key, int mods)
 {
+    if (key == GLFW_KEY_SPACE) {  // Fire from Tank 1
+        glm::vec2 cannonTip = GetCannonTipPosition(tank1X, tank1Y, tank1Angle, tank1TurretAngle, false);
+        float totalAngle = tank1Angle + tank1TurretAngle;
+        FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
+    } else if (key == GLFW_KEY_ENTER) {  // Fire from Tank 2
+        glm::vec2 cannonTip = GetCannonTipPosition(tank2X, tank2Y, tank2Angle, tank2TurretAngle, true);
+        float adjustedTurretAngle = -tank2TurretAngle;  // Mirrored
+        float totalAngle = tank2Angle + adjustedTurretAngle;
+        FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
+    }
 }
 
 void Tema1::OnKeyRelease(int key, int mods)

@@ -6,13 +6,13 @@ namespace m1
 {
     class Tema1 : public gfxc::SimpleScene
     {
-     public:
+    public:
         Tema1();
         ~Tema1();
 
         void Init() override;
 
-     private:
+    private:
         void FrameStart() override;
         void Update(float deltaTimeSeconds) override;
         void FrameEnd() override;
@@ -26,7 +26,7 @@ namespace m1
         void OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY) override;
         void OnWindowResize(int width, int height) override;
 
-     protected:
+    protected:
         glm::mat3 modelMatrix;
         std::vector<float> heightMap; // Terrain height map
 
@@ -36,26 +36,32 @@ namespace m1
         glm::vec3 tank1Color, tank2Color;
         glm::vec3 tank1ColorBottom, tank2ColorBottom;
         float tank1Angle, tank2Angle; // Angles to align tanks with terrain
-        
-        
 
+        // Gravity and projectile parameters
+        float projectileSpeed = 500.0f;       // Adjust as needed
+        float projectileLifespan = 5.0f;      // seconds
+        glm::vec2 gravity = glm::vec2(0.0f, -400.0f); // Adjust as needed
+
+        // Projectile struct and list
+        struct Projectile {
+            glm::vec2 position;
+            glm::vec2 velocity;
+            float lifespan;
+        };
+        std::vector<Projectile> projectiles;  // List to store active projectiles
+
+        // Methods
         void GenerateTerrain();  // Function to initialize terrain data
-      //   void RenderTank(float x, float y, float turretAngle, const glm::vec3 &color);
-      //   void RenderTank(float x, float y, float turretAngle,
-      //                  const std::string& trapezoid1Name,
-      //                  const std::string& trapezoid2Name,
-      //                  const std::string& turretName,
-      //                  const std::string& cannonName,
-      //                  bool mirrored);
-      void RenderTank(float x, float y, float turretAngle, float bodyAngle,
-                       const std::string& trapezoid1Name,
-                       const std::string& trapezoid2Name,
-                       const std::string& turretName,
-                       const std::string& cannonName,
-                       bool mirrored);
+        void RenderTank(float x, float y, float turretAngle, float bodyAngle,
+                        const std::string& trapezoid1Name,
+                        const std::string& trapezoid2Name,
+                        const std::string& turretName,
+                        const std::string& cannonName,
+                        bool mirrored);
 
         void MoveTank(float &x, float &y, int direction, float deltaTimeSeconds);
         void AdjustTankPosition(float &x, float &y);
-
+        void FireProjectile(float startX, float startY, float angle);
+        glm::vec2 GetCannonTipPosition(float tankX, float tankY, float tankAngle, float turretAngle, bool mirrored);
     };
 }   // namespace m1

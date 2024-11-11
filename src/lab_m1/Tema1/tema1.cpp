@@ -41,7 +41,7 @@ void Tema1::Init()
 
     tank2Color = glm::vec3(0.62f, 0.73f, 0.45f); // Right tank
     tank2ColorBottom = glm::vec3(0.32f, 0.38f, 0.19f); // Right tank
-    tank2TurretAngle = 1.0f;
+    tank2TurretAngle = 5.5f;
 
     // Generate terrain data
     GenerateTerrain();
@@ -106,9 +106,9 @@ void Tema1::Init()
     AddMeshToList(turret_tank2);
 
     Mesh* cannon_tank2 = object2D::CreateRectangle("cannon_tank2",
-        glm::vec3(0, 0, 0), // Centered around the turret center
-        30, // width
-        5, // height
+        glm::vec3(-30, -2.5f, 0), // Start from -30 to point left
+        30, // width (length of the cannon)
+        5,  // height
         cannonColor, true);
     AddMeshToList(cannon_tank2);
 
@@ -173,7 +173,7 @@ void Tema1::RenderTank(float x, float y, float turretAngle, float bodyAngle,
                        const std::string& trapezoid2Name,
                        const std::string& turretName,
                        const std::string& cannonName,
-                       bool mirrored)
+                       bool cannonPointsLeft)
 {
     glm::mat3 modelMatrix = glm::mat3(1);
 
@@ -182,11 +182,6 @@ void Tema1::RenderTank(float x, float y, float turretAngle, float bodyAngle,
 
     // Apply body rotation around the tank's base (which is at (0, 0) in local coordinates)
     modelMatrix *= transform2D::Rotate(bodyAngle);
-
-    // Apply mirroring if needed
-    if (mirrored) {
-        modelMatrix *= transform2D::Scale(-1, 1);
-    }
 
     // Render the tank body (top trapezoid)
     RenderMesh2D(meshes[trapezoid1Name], shaders["VertexColor"], modelMatrix);
@@ -198,17 +193,20 @@ void Tema1::RenderTank(float x, float y, float turretAngle, float bodyAngle,
     glm::mat3 modelMatrixTurret = modelMatrix;
     RenderMesh2D(meshes[turretName], shaders["VertexColor"], modelMatrixTurret);
 
-    // Adjust turret angle for mirrored tank
-    float adjustedTurretAngle = mirrored ? -turretAngle : turretAngle;
-
     // Render the cannon with rotation around the turret center
     glm::mat3 modelMatrixCannon = modelMatrix;
     modelMatrixCannon *= transform2D::Translate(11, 20);     // Move to the turret center
-    modelMatrixCannon *= transform2D::Rotate(adjustedTurretAngle);   // Rotate around the turret center
+
+    if (cannonPointsLeft) {
+        modelMatrixCannon *= transform2D::Rotate(PI + turretAngle); // Adjust rotation for cannon pointing left
+    } else {
+        modelMatrixCannon *= transform2D::Rotate(turretAngle);
+    }
+
     RenderMesh2D(meshes[cannonName], shaders["VertexColor"], modelMatrixCannon);
 }
 
-glm::vec2 Tema1::GetCannonTipPosition(float tankX, float tankY, float tankAngle, float turretAngle, bool mirrored)
+glm::vec2 Tema1::GetCannonTipPosition(float tankX, float tankY, float tankAngle, float turretAngle, bool cannonPointsLeft)
 {
     glm::vec2 localCannonTip = glm::vec2(30.0f, 0.0f);
 
@@ -217,20 +215,19 @@ glm::vec2 Tema1::GetCannonTipPosition(float tankX, float tankY, float tankAngle,
     // Apply transformations
     modelMatrix *= transform2D::Translate(tankX, tankY);
     modelMatrix *= transform2D::Rotate(tankAngle);
-
-    if (mirrored) {
-        modelMatrix *= transform2D::Scale(-1, 1);
-    }
-
     modelMatrix *= transform2D::Translate(11, 20);
 
-    float adjustedTurretAngle = mirrored ? -turretAngle : turretAngle;
-    modelMatrix *= transform2D::Rotate(adjustedTurretAngle);
+    if (cannonPointsLeft) {
+        modelMatrix *= transform2D::Rotate(PI + turretAngle); // Adjust rotation for cannon pointing left
+    } else {
+        modelMatrix *= transform2D::Rotate(turretAngle);
+    }
 
     glm::vec3 worldCannonTip = modelMatrix * glm::vec3(localCannonTip, 1.0f);
 
     return glm::vec2(worldCannonTip.x, worldCannonTip.y);
 }
+
 
 void Tema1::FireProjectile(float startX, float startY, float angle) {
     Projectile p;
@@ -300,8 +297,8 @@ void Tema1::Update(float deltaTimeSeconds)
 
     // Render Tank 2 (mirrored)
     RenderTank(tank2X, tank2Y, tank2TurretAngle, tank2Angle,
-               "trapezoid1_tank2", "trapezoid2_tank2",
-               "turret_tank2", "cannon_tank2", true);
+           "trapezoid1_tank2", "trapezoid2_tank2",
+           "turret_tank2", "cannon_tank2", false /* cannonPointsLeft */);
 
     for (auto it = projectiles.begin(); it != projectiles.end(); ) {
         it->position += it->velocity * deltaTimeSeconds;
@@ -340,11 +337,11 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
     // Tank 2 movement (Arrow Keys)
     if (window->KeyHold(GLFW_KEY_LEFT)) MoveTank(tank2X, tank2Y, -1, deltaTime);
     if (window->KeyHold(GLFW_KEY_RIGHT)) MoveTank(tank2X, tank2Y, 1, deltaTime);
-    if (window->KeyHold(GLFW_KEY_UP)) tank2TurretAngle -= deltaTime;
+    if (window->KeyHold(GLFW_KEY_UP)) tank2TurretAngle -= deltaTime;     // Adjusted for left-pointing cannon
     if (window->KeyHold(GLFW_KEY_DOWN)) tank2TurretAngle += deltaTime;
 
-    // Clamp turret angle between 0 and PI (0 to 180 degrees)
-    tank2TurretAngle = clamp(tank2TurretAngle, 0.0f, PI);
+    // Clamp turret angle between -PI/2 and PI/2
+    tank2TurretAngle = clamp(tank2TurretAngle, PI, 2.0 * PI);
 
     // if (window->KeyHold(GLFW_KEY_SPACE)) {  // Fire from Tank 1
     //     glm::vec2 cannonTip = GetCannonTipPosition(tank1X, tank1Y, tank1Angle, tank1TurretAngle, false);
@@ -365,13 +362,12 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
 void Tema1::OnKeyPress(int key, int mods)
 {
     if (key == GLFW_KEY_SPACE) {  // Fire from Tank 1
-        glm::vec2 cannonTip = GetCannonTipPosition(tank1X, tank1Y, tank1Angle, tank1TurretAngle, false);
+        glm::vec2 cannonTip = GetCannonTipPosition(tank1X, tank1Y, tank1Angle, tank1TurretAngle, false /* cannonPointsLeft */);
         float totalAngle = tank1Angle + tank1TurretAngle;
         FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
     } else if (key == GLFW_KEY_ENTER) {  // Fire from Tank 2
-        glm::vec2 cannonTip = GetCannonTipPosition(tank2X, tank2Y, tank2Angle, tank2TurretAngle, true);
-        float adjustedTurretAngle = -tank2TurretAngle;  // Mirrored
-        float totalAngle = tank2Angle + adjustedTurretAngle;
+        glm::vec2 cannonTip = GetCannonTipPosition(tank2X, tank2Y, tank2Angle, tank2TurretAngle, true /* cannonPointsLeft */);
+        float totalAngle = tank2Angle + PI + tank2TurretAngle;  // Adjusted angle for cannon pointing left
         FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
     }
 }

@@ -70,8 +70,7 @@ namespace m1
                        const std::string& trapezoid1Name,
                        const std::string& trapezoid2Name,
                        const std::string& turretName,
-                       const std::string& cannonName,
-                       bool cannonPointsLeft);
+                       const std::string& cannonName);
 
         void MoveTank(float &x, float &y, int direction, float deltaTimeSeconds);
         void AdjustTankPosition(float &x, float &y);

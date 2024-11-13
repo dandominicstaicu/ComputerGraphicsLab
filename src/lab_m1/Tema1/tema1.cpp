@@ -199,8 +199,7 @@ void Tema1::RenderTank(float x, float y, float turretAngle, float bodyAngle,
                        const std::string& trapezoid1Name,
                        const std::string& trapezoid2Name,
                        const std::string& turretName,
-                       const std::string& cannonName,
-                       bool cannonPointsLeft)
+                       const std::string& cannonName)
 {
     glm::mat3 modelMatrix = glm::mat3(1);
 
@@ -224,11 +223,7 @@ void Tema1::RenderTank(float x, float y, float turretAngle, float bodyAngle,
     glm::mat3 modelMatrixCannon = modelMatrix;
     modelMatrixCannon *= transform2D::Translate(11, 20);     // Move to the turret center
 
-    if (cannonPointsLeft) {
-        modelMatrixCannon *= transform2D::Rotate(PI + turretAngle); // Adjust rotation for cannon pointing left
-    } else {
-        modelMatrixCannon *= transform2D::Rotate(turretAngle);
-    }
+    modelMatrixCannon *= transform2D::Rotate(turretAngle);
 
     RenderMesh2D(meshes[cannonName], shaders["VertexColor"], modelMatrixCannon);
 }
@@ -321,14 +316,14 @@ void Tema1::Update(float deltaTimeSeconds)
         // Render Tank 1
         RenderTank(tank1X, tank1Y, tank1TurretAngle, tank1Angle,
                    "trapezoid1_tank1", "trapezoid2_tank1",
-                   "turret_tank1", "cannon_tank1", false);
+                   "turret_tank1", "cannon_tank1");
     }
 
     if (tank2Alive) {
         // Render Tank 2
         RenderTank(tank2X, tank2Y, tank2TurretAngle, tank2Angle,
                "trapezoid1_tank2", "trapezoid2_tank2",
-               "turret_tank2", "cannon_tank2", false /* cannonPointsLeft */);
+               "turret_tank2", "cannon_tank2");
     }
     
     for (auto it = projectiles.begin(); it != projectiles.end(); ) {
@@ -391,7 +386,7 @@ void Tema1::Update(float deltaTimeSeconds)
     if (tank1Alive) {
         RenderTank(tank1X, tank1Y, tank1TurretAngle, tank1Angle,
                    "trapezoid1_tank1", "trapezoid2_tank1",
-                   "turret_tank1", "cannon_tank1", false);
+                   "turret_tank1", "cannon_tank1");
 
         // Render health bar for Tank 1
         float healthPercentage = tank1Health / maxHealth;
@@ -410,7 +405,7 @@ void Tema1::Update(float deltaTimeSeconds)
     if (tank2Alive) {
         RenderTank(tank2X, tank2Y, tank2TurretAngle, tank2Angle,
                    "trapezoid1_tank2", "trapezoid2_tank2",
-                   "turret_tank2", "cannon_tank2", true /* cannonPointsLeft */);
+                   "turret_tank2", "cannon_tank2");
 
         // Render health bar for Tank 2
         float healthPercentage = tank2Health / maxHealth;
@@ -450,17 +445,6 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
 
     // Clamp turret angle between -PI/2 and PI/2
     tank2TurretAngle = clamp(tank2TurretAngle, PI, 2.0 * PI);
-
-    // if (window->KeyHold(GLFW_KEY_SPACE)) {  // Fire from Tank 1
-    //     glm::vec2 cannonTip = GetCannonTipPosition(tank1X, tank1Y, tank1Angle, tank1TurretAngle, false);
-    //     float totalAngle = tank1Angle + tank1TurretAngle;
-    //     FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
-    // } else if (window->KeyHold(GLFW_KEY_ENTER)) {  // Fire from Tank 2
-    //     glm::vec2 cannonTip = GetCannonTipPosition(tank2X, tank2Y, tank2Angle, tank2TurretAngle, true);
-    //     float adjustedTurretAngle = -tank2TurretAngle;  // Mirrored
-    //     float totalAngle = tank2Angle + adjustedTurretAngle;
-    //     FireProjectile(cannonTip.x, cannonTip.y, totalAngle);
-    // }
 
     // Keep tanks on terrain
     AdjustTankPosition(tank1X, tank1Y);

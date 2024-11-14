@@ -326,54 +326,89 @@ void Tema1::Update(float deltaTimeSeconds)
                "turret_tank2", "cannon_tank2");
     }
     
-    for (auto it = projectiles.begin(); it != projectiles.end(); ) {
+        for (auto it = projectiles.begin(); it != projectiles.end(); ) {
         it->position += it->velocity * deltaTimeSeconds;
         it->velocity += gravity * deltaTimeSeconds; // Apply gravity
         it->lifespan -= deltaTimeSeconds;
 
         bool collisionDetected = false;
 
-        // Check collision with Tank 1
-        if (tank1Alive) {
-            float dx1 = it->position.x - tank1X;
-            float dy1 = it->position.y - tank1Y;
-            float distance1 = sqrt(dx1 * dx1 + dy1 * dy1);
-            if (distance1 < (projectileCollisionRadius + tankCollisionRadius)) {
-                // Collision with Tank 1
-                tank1Health -= damagePerHit;
+        // **Collision Detection with Terrain**
+        float x = it->position.x;
+        if (x >= 0 && x < terrainWidth - 1) {
+            int x1 = static_cast<int>(floor(x));
+            int x2 = x1 + 1;
+            float t = (x - x1) / (x2 - x1);
+            float y1 = heightMap[x1];
+            float y2 = heightMap[x2];
+            float yTerrain = y1 * (1 - t) + y2 * t;
+            float terrainHeight = yTerrain + offsetY;
+
+            // If projectile is below or touching the terrain
+            if (it->position.y <= terrainHeight) {
                 collisionDetected = true;
 
-                if (tank1Health <= 0) {
-                    tank1Health = 0;
-                    tank1Alive = false;
-                    // Optional: Add explosion effect or sound
+                // **Modify the terrain to create a crater**
+                int craterCenter = static_cast<int>(x);
+                int start = std::max(0, craterCenter - static_cast<int>(craterRadius));
+                int end = std::min(terrainWidth - 1, craterCenter + static_cast<int>(craterRadius));
+
+                for (int i = start; i <= end; ++i) {
+                    float distance = abs(i - x);
+                    if (distance <= craterRadius) {
+                        // Simple linear falloff
+                        float deformation = (1.0f - (distance / craterRadius)) * craterDepth;
+                        heightMap[i] -= deformation;
+
+                        // Ensure the height doesn't go below a minimum value
+                        heightMap[i] = std::max(heightMap[i], minTerrainHeight);
+                    }
                 }
             }
         }
 
-        // Check collision with Tank 2
-        if (tank2Alive) {
-            float dx2 = it->position.x - tank2X;
-            float dy2 = it->position.y - tank2Y;
-            float distance2 = sqrt(dx2 * dx2 + dy2 * dy2);
-            if (distance2 < (projectileCollisionRadius + tankCollisionRadius)) {
-                // Collision with Tank 2
-                tank2Health -= damagePerHit;
-                collisionDetected = true;
+        // **Collision Detection with Tanks**
+        if (!collisionDetected) {
+            // Check collision with Tank 1
+            if (tank1Alive) {
+                float dx1 = it->position.x - tank1X;
+                float dy1 = it->position.y - tank1Y;
+                float distance1 = sqrt(dx1 * dx1 + dy1 * dy1);
+                if (distance1 < (projectileCollisionRadius + tankCollisionRadius)) {
+                    tank1Health -= damagePerHit;
+                    collisionDetected = true;
 
-                if (tank2Health <= 0) {
-                    tank2Health = 0;
-                    tank2Alive = false;
-                    // Optional: Add explosion effect or sound
+                    if (tank1Health <= 0) {
+                        tank1Health = 0;
+                        tank1Alive = false;
+                        // Optional: Add explosion effect or sound
+                    }
+                }
+            }
+
+            // Check collision with Tank 2
+            if (tank2Alive) {
+                float dx2 = it->position.x - tank2X;
+                float dy2 = it->position.y - tank2Y;
+                float distance2 = sqrt(dx2 * dx2 + dy2 * dy2);
+                if (distance2 < (projectileCollisionRadius + tankCollisionRadius)) {
+                    tank2Health -= damagePerHit;
+                    collisionDetected = true;
+
+                    if (tank2Health <= 0) {
+                        tank2Health = 0;
+                        tank2Alive = false;
+                        // Optional: Add explosion effect or sound
+                    }
                 }
             }
         }
 
-        // Remove projectile if it has expired or if it collided
+        // **Remove Projectile if Collision Occurred or Lifespan Expired**
         if (it->lifespan <= 0 || collisionDetected) {
             it = projectiles.erase(it);
         } else {
-            // Render the projectile as a small circle
+            // Render the projectile
             glm::mat3 modelMatrix = glm::mat3(1);
             modelMatrix *= transform2D::Translate(it->position.x, it->position.y);
             RenderMesh2D(meshes["projectile"], shaders["VertexColor"], modelMatrix);

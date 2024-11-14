@@ -62,7 +62,11 @@ namespace m1
         // Collision detection parameters
         float projectileCollisionRadius;
         float tankCollisionRadius;
-        float damagePerHit;  
+        float damagePerHit;
+
+        float craterRadius = 35.0f;       // Radius of the crater
+        float craterDepth = 10.0f;        // Depth of the crater
+        float minTerrainHeight = -200.0f; // Minimum allowed terrain height
 
         // Methods
         void GenerateTerrain();  // Function to initialize terrain data

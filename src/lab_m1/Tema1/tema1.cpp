@@ -1,5 +1,6 @@
 #include "tema1.h"
 #include <vector>
+#include <cmath>
 #include <iostream>
 #include "lab_m1/Tema1/transform2D.h"
 #include "lab_m1/Tema1/object2D.h"
@@ -64,7 +65,7 @@ void Tema1::Init()
 
     // Create meshes for Tank 1
     Mesh* trapezoid1_tank1 = object2D::CreateTrapezoid("trapezoid1_tank1",
-        glm::vec3(-40, 0, 0), // Adjusted so that the tank's base is at (0, 0)
+        glm::vec3(-40, 0, 0),
         80, // widthTop
         100, // widthBottom
         20, // height
@@ -72,7 +73,7 @@ void Tema1::Init()
     AddMeshToList(trapezoid1_tank1);
 
     Mesh* trapezoid2_tank1 = object2D::CreateTrapezoid("trapezoid2_tank1",
-        glm::vec3(-18, -12, 0), // Adjusted position
+        glm::vec3(-18, -12, 0),
         70, // widthTop
         60, // widthBottom
         12, // height
@@ -229,7 +230,7 @@ void Tema1::UpdateTrajectoryMesh(Mesh*& mesh, const std::vector<glm::vec2>& traj
 void Tema1::GenerateTerrain()
 {
     // Simple height map generation for the terrain
-    int terrainWidth = 1280; // 1280;
+    int terrainWidth = 1280;
 
     // Desired number of cycles over the terrain width
     float cycles1 = 2.7f;  // Gentle slope
@@ -283,7 +284,7 @@ void Tema1::RenderTank(float x, float y, float turretAngle, float bodyAngle,
     // Apply translation to tank position
     modelMatrix *= transform2D::Translate(x, y);
 
-    // Apply body rotation around the tank's base (which is at (0, 0) in local coordinates)
+    // Apply body rotation around the tank's base
     modelMatrix *= transform2D::Rotate(bodyAngle);
 
     // Render the tank body (top trapezoid)
@@ -439,17 +440,20 @@ void Tema1::Update(float deltaTimeSeconds)
                 for (int i = startX; i <= endX; ++i) {
                     float dx = i - x0;
                     if (abs(dx) <= craterRadius) {
-                        float dy = sqrt(craterRadius * craterRadius - dx * dx);
-                        float craterBottom = y0 - dy;
+                        float dySquared = craterRadius * craterRadius - dx * dx;
+                        if (dySquared >= 0.0f) { // Ensure non-negative argument for sqrt
+                            float dy = sqrt(dySquared);
+                            float craterBottom = y0 - dy;
 
-                        // Adjust terrain height
-                        float newHeight = craterBottom - offsetY;
+                            // Adjust terrain height
+                            float newHeight = craterBottom - offsetY;
 
-                        // Set the terrain height to the lower of the current height and the crater's bottom
-                        heightMap[i] = std::min(heightMap[i], newHeight);
+                            // Set the terrain height to the lower of the current height and the crater's bottom
+                            heightMap[i] = std::min(heightMap[i], newHeight);
 
-                        // Ensure the height doesn't go below a minimum value
-                        heightMap[i] = std::max(heightMap[i], minTerrainHeight);
+                            // Ensure the height doesn't go below a minimum value
+                            heightMap[i] = std::max(heightMap[i], minTerrainHeight);
+                        }
                     }
                 }
             }
@@ -469,7 +473,7 @@ void Tema1::Update(float deltaTimeSeconds)
                     if (tank1Health <= 0) {
                         tank1Health = 0;
                         tank1Alive = false;
-                        // Optional: Add explosion effect or sound
+                        // todo: Add explosion effect or sound
                     }
                 }
             }
@@ -486,7 +490,7 @@ void Tema1::Update(float deltaTimeSeconds)
                     if (tank2Health <= 0) {
                         tank2Health = 0;
                         tank2Alive = false;
-                        // Optional: Add explosion effect or sound
+                        // todo: Add explosion effect or sound
                     }
                 }
             }
@@ -505,7 +509,7 @@ void Tema1::Update(float deltaTimeSeconds)
     }
 
     // **Terrain Landslide Animation**
-    int neighborhoodRadius = 3; // Adjust for desired smoothness
+    int neighborhoodRadius = 5; // desired smoothness
 
     // Create a copy of the heightMap to store updated heights
     std::vector<float> newHeightMap = heightMap;
@@ -556,12 +560,23 @@ void Tema1::Update(float deltaTimeSeconds)
         }
     }
 
+    // After updating newHeightMap
+    for (size_t i = 0; i < newHeightMap.size(); ++i) {
+        if (std::isnan(newHeightMap[i]) || std::isinf(newHeightMap[i])) {
+            newHeightMap[i] = minTerrainHeight;
+        }
+    }
+
     // Update heightMap with the new values
     heightMap = newHeightMap;
 
-    // Ensure terrain heights do not go below minimum height
+    // Ensure terrain heights are valid
     for (size_t i = 0; i < heightMap.size(); ++i) {
-        heightMap[i] = std::max(heightMap[i], minTerrainHeight);
+        if (std::isnan(heightMap[i]) || std::isinf(heightMap[i])) {
+            heightMap[i] = minTerrainHeight;
+        } else {
+            heightMap[i] = std::max(heightMap[i], minTerrainHeight);
+        }
     }
 
     // Render Tank 1 and its health bar

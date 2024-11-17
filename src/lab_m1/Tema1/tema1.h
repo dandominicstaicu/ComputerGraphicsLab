@@ -50,6 +50,17 @@ namespace m1
         };
         std::vector<Projectile> projectiles;  // List to store active projectiles
 
+        // Cloud struct and variables
+        struct Cloud {
+            glm::vec2 position;
+            float speed;
+            float scale;
+        };
+        
+        std::vector<Cloud> clouds;
+        int numberOfClouds;
+        float cloudSpawnY;
+
         float healthBarWidth;
         float healthBarHeight;
 

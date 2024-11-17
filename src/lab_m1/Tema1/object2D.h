@@ -15,4 +15,5 @@ namespace object2D
     Mesh* CreateCircle(const std::string& name, glm::vec3 center, float radius, glm::vec3 color, bool fill, int numSegments); 
     Mesh* CreateTrapezoid(const std::string& name, glm::vec3 bottomLeft, float widthTop, float widthBottom, float height, glm::vec3 color);
     Mesh* CreateRectangle(const std::string &name, glm::vec3 bottomLeftCorner, float width, float height, glm::vec3 color, bool fill);
+    Mesh* CreateCloud(const std::string& name, glm::vec3 center, float radius, glm::vec3 color);
 }

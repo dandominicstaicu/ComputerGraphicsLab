@@ -125,3 +125,44 @@ Mesh* object2D::CreateRectangle(
     return rectangle;
 }
 
+Mesh* object2D::CreateCloud(const std::string& name, glm::vec3 center, float radius, glm::vec3 color)
+{
+    std::vector<VertexFormat> vertices;
+    std::vector<unsigned int> indices;
+
+    // Create a simple cloud shape using circles
+    // We'll create three overlapping circles to form a cloud
+
+    // Circle positions relative to the cloud's center
+    glm::vec3 offset1 = glm::vec3(-radius / 2.0f, 0.0f, 0.0f);
+    glm::vec3 offset2 = glm::vec3(radius / 2.0f, 0.0f, 0.0f);
+    glm::vec3 offset3 = glm::vec3(0.0f, radius / 3.0f, 0.0f);
+
+    // Function to add a circle to the cloud
+    auto addCircle = [&](glm::vec3 offset) {
+        int segments = 20;
+        float angleStep = 2 * PI / segments;
+        int startIndex = vertices.size();
+
+        for (int i = 0; i < segments; ++i) {
+            float angle = i * angleStep;
+            glm::vec3 position = center + offset + glm::vec3(radius * cos(angle), radius * sin(angle), 0.0f);
+            vertices.emplace_back(position, color);
+        }
+
+        // Create a triangle fan for the circle
+        for (int i = 0; i < segments - 2; ++i) {
+            indices.push_back(startIndex);
+            indices.push_back(startIndex + i + 1);
+            indices.push_back(startIndex + i + 2);
+        }
+    };
+
+    addCircle(offset1);
+    addCircle(offset2);
+    addCircle(offset3);
+
+    Mesh* cloud = new Mesh(name);
+    cloud->InitFromData(vertices, indices);
+    return cloud;
+}

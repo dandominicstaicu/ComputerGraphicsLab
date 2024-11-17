@@ -161,6 +161,23 @@ void Tema1::Init()
     AddMeshToList(healthBarBorder);
 
     offsetY = 235.0f; // Ground level offset
+
+    // Cloud properties
+    numberOfClouds = 3; // Number of clouds
+    cloudSpawnY = window->GetResolution().y - 100.0f; // Y position for clouds
+
+    // Create a mesh for a cloud
+    Mesh* cloudMesh = object2D::CreateCloud("cloud", glm::vec3(0, 0, 0), 50.0f, glm::vec3(1.0f));
+    AddMeshToList(cloudMesh);
+
+    // Initialize clouds with random positions and speeds
+    for (int i = 0; i < numberOfClouds; ++i) {
+        Cloud cloud;
+        cloud.position = glm::vec2(rand() % window->GetResolution().x, cloudSpawnY + rand() % 100);
+        cloud.speed = 20.0f + rand() % 30; // Random speed between 20 and 50
+        cloud.scale = 0.5f + static_cast<float>(rand() % 10) / 10.0f; // Random scale between 0.5 and 1.5
+        clouds.push_back(cloud);
+    }
 }
 
 float Tema1::GetTerrainHeightAt(float x) {
@@ -232,7 +249,7 @@ void Tema1::GenerateTerrain()
     // Simple height map generation for the terrain
     int terrainWidth = 1280;
 
-    // Desired number of cycles over the terrain width
+    // Number of cycles over the terrain width
     float cycles1 = 2.7f;  // Gentle slope
     float cycles2 = 4.5f;  // Moderate variation
     float cycles3 = 5.5f;  // Smaller details
@@ -473,7 +490,6 @@ void Tema1::Update(float deltaTimeSeconds)
                     if (tank1Health <= 0) {
                         tank1Health = 0;
                         tank1Alive = false;
-                        // todo: Add explosion effect or sound
                     }
                 }
             }
@@ -490,7 +506,6 @@ void Tema1::Update(float deltaTimeSeconds)
                     if (tank2Health <= 0) {
                         tank2Health = 0;
                         tank2Alive = false;
-                        // todo: Add explosion effect or sound
                     }
                 }
             }
@@ -509,7 +524,7 @@ void Tema1::Update(float deltaTimeSeconds)
     }
 
     // **Terrain Landslide Animation**
-    int neighborhoodRadius = 5; // desired smoothness
+    int neighborhoodRadius = 5; // Smoothness
 
     // Create a copy of the heightMap to store updated heights
     std::vector<float> newHeightMap = heightMap;
@@ -643,6 +658,24 @@ void Tema1::Update(float deltaTimeSeconds)
 
         // Render trajectory
         RenderMesh2D(tank2TrajectoryMesh, shaders["VertexColor"], glm::mat3(1));
+    }
+
+    // Update and render clouds
+    for (Cloud& cloud : clouds) {
+        // Update cloud position
+        cloud.position.x += cloud.speed * deltaTimeSeconds;
+
+        // Wrap around if cloud moves off-screen
+        if (cloud.position.x > window->GetResolution().x) {
+            cloud.position.x = -100.0f; // Move to the left off-screen
+            cloud.position.y = cloudSpawnY + rand() % 100; // Randomize Y position
+        }
+
+        // Render cloud
+        glm::mat3 modelMatrix = glm::mat3(1);
+        modelMatrix *= transform2D::Translate(cloud.position.x, cloud.position.y);
+        modelMatrix *= transform2D::Scale(cloud.scale, cloud.scale);
+        RenderMesh2D(meshes["cloud"], shaders["VertexColor"], modelMatrix);
     }
 }
 

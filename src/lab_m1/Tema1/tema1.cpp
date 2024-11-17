@@ -9,10 +9,18 @@ using namespace m1;
 
 Tema1::Tema1()
 {
+    tank1TrajectoryMesh = nullptr;
+    tank2TrajectoryMesh = nullptr;
 }
 
 Tema1::~Tema1()
 {
+    if (tank1TrajectoryMesh) {
+        delete tank1TrajectoryMesh;
+    }
+    if (tank2TrajectoryMesh) {
+        delete tank2TrajectoryMesh;
+    }
 }
 
 float clamp(float value, float min, float max) {
@@ -42,6 +50,9 @@ void Tema1::Init()
     tank2Color = glm::vec3(0.62f, 0.73f, 0.45f); // Right tank
     tank2ColorBottom = glm::vec3(0.32f, 0.38f, 0.19f); // Right tank
     tank2TurretAngle = 5.5f;
+
+    tank1Angle = 0.0f;
+    tank2Angle = 0.0f;
 
     // Generate terrain data
     GenerateTerrain();
@@ -147,6 +158,72 @@ void Tema1::Init()
                                                       healthBarWidth, healthBarHeight,
                                                       glm::vec3(0.0f, 0.0f, 0.0f), false);
     AddMeshToList(healthBarBorder);
+
+    offsetY = 235.0f; // Ground level offset
+}
+
+float Tema1::GetTerrainHeightAt(float x) {
+    int x1 = static_cast<int>(floor(x));
+    int x2 = x1 + 1;
+    if (x1 < 0 || x2 >= heightMap.size()) {
+        return 0.0f; // Default terrain height if out of bounds
+    }
+
+    float y1 = heightMap[x1];
+    float y2 = heightMap[x2];
+    float t = x - x1;
+    float yTerrain = y1 * (1 - t) + y2 * t;
+    return yTerrain + offsetY;
+}
+
+void Tema1::ComputeProjectileTrajectory(float startX, float startY, float angle, std::vector<glm::vec2>& trajectoryPoints) {
+    float t = 0.0f;
+    float dt = 0.05f; // Adjust time step as needed
+    glm::vec2 position = glm::vec2(startX, startY);
+    glm::vec2 velocity = glm::vec2(cos(angle), sin(angle)) * projectileSpeed;
+
+    float maxTime = 10.0f; // Max simulation time to prevent infinite loops
+    float terrainWidth = static_cast<float>(heightMap.size());
+
+    while (position.y >= GetTerrainHeightAt(position.x) && t < maxTime) {
+        trajectoryPoints.push_back(position);
+
+        position += velocity * dt;
+        velocity += gravity * dt;
+
+        t += dt;
+
+        // Break if position.x is out of terrain bounds
+        if (position.x < 0 || position.x >= terrainWidth)
+            break;
+    }
+}
+
+void Tema1::UpdateTrajectoryMesh(Mesh*& mesh, const std::vector<glm::vec2>& trajectoryPoints, const std::string& meshName) {
+    if (trajectoryPoints.empty()) {
+        // If there is an existing mesh, delete it
+        if (mesh != nullptr) {
+            delete mesh;
+            mesh = nullptr;
+        }
+        return;
+    }
+
+    std::vector<VertexFormat> vertices;
+    std::vector<unsigned int> indices;
+
+    for (unsigned int i = 0; i < trajectoryPoints.size(); ++i) {
+        const glm::vec2& point = trajectoryPoints[i];
+        vertices.emplace_back(glm::vec3(point, 0.0f), glm::vec3(1.0f)); // White color
+        indices.push_back(i);
+    }
+
+    if (mesh == nullptr) {
+        mesh = new Mesh(meshName);
+        mesh->SetDrawMode(GL_LINE_STRIP);
+    }
+
+    mesh->InitFromData(vertices, indices);
 }
 
 void Tema1::GenerateTerrain()
@@ -300,6 +377,8 @@ void Tema1::Update(float deltaTimeSeconds)
         float deltaX = 2.0f;  // Difference in x positions
         float slope = deltaHeight / deltaX;
         tank1Angle = atan(slope);
+    } else {
+        tank1Angle = 0.0f; // Default angle when out of bounds
     }
 
     // Compute tank2 angle based on terrain slope
@@ -309,6 +388,8 @@ void Tema1::Update(float deltaTimeSeconds)
         float deltaX = 2.0f;
         float slope = deltaHeight / deltaX;
         tank2Angle = atan(slope);
+    } else {
+        tank2Angle = 0.0f; // Default angle when out of bounds
     }
 
 
@@ -326,7 +407,7 @@ void Tema1::Update(float deltaTimeSeconds)
                "turret_tank2", "cannon_tank2");
     }
     
-        for (auto it = projectiles.begin(); it != projectiles.end(); ) {
+    for (auto it = projectiles.begin(); it != projectiles.end(); ) {
         it->position += it->velocity * deltaTimeSeconds;
         it->velocity += gravity * deltaTimeSeconds; // Apply gravity
         it->lifespan -= deltaTimeSeconds;
@@ -453,6 +534,34 @@ void Tema1::Update(float deltaTimeSeconds)
 
         RenderMesh2D(meshes["healthBarFull"], shaders["VertexColor"], healthBarFullMatrix);
         RenderMesh2D(meshes["healthBarBorder"], shaders["VertexColor"], healthBarModelMatrix);
+    }
+
+    // For Tank 1 trajectory guide
+    if (tank1Alive) {
+        // Compute trajectory
+        std::vector<glm::vec2> tank1TrajectoryPoints;
+        glm::vec2 cannonTip = GetCannonTipPosition(tank1X, tank1Y, tank1Angle, tank1TurretAngle, false);
+        float totalAngle = tank1Angle + tank1TurretAngle;
+
+        ComputeProjectileTrajectory(cannonTip.x, cannonTip.y, totalAngle, tank1TrajectoryPoints);
+        UpdateTrajectoryMesh(tank1TrajectoryMesh, tank1TrajectoryPoints, "tank1Trajectory");
+
+        // Render trajectory
+        RenderMesh2D(tank1TrajectoryMesh, shaders["VertexColor"], glm::mat3(1));
+    }
+
+    // For Tank 2 trajectory guide
+    if (tank2Alive) {
+        // Compute trajectory
+        std::vector<glm::vec2> tank2TrajectoryPoints;
+        glm::vec2 cannonTip = GetCannonTipPosition(tank2X, tank2Y, tank2Angle, tank2TurretAngle, true);
+        float totalAngle = tank2Angle + PI + tank2TurretAngle;
+
+        ComputeProjectileTrajectory(cannonTip.x, cannonTip.y, totalAngle, tank2TrajectoryPoints);
+        UpdateTrajectoryMesh(tank2TrajectoryMesh, tank2TrajectoryPoints, "tank2Trajectory");
+
+        // Render trajectory
+        RenderMesh2D(tank2TrajectoryMesh, shaders["VertexColor"], glm::mat3(1));
     }
 }
 

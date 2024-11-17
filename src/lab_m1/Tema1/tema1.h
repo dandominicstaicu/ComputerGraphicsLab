@@ -68,6 +68,16 @@ namespace m1
         float craterDepth = 10.0f;        // Depth of the crater
         float minTerrainHeight = -200.0f; // Minimum allowed terrain height
 
+        // For trajectory guide
+        float offsetY; // Ground level offset
+        void ComputeProjectileTrajectory(float startX, float startY, float angle, std::vector<glm::vec2>& trajectoryPoints);
+        float GetTerrainHeightAt(float x);
+        void UpdateTrajectoryMesh(Mesh*& mesh, const std::vector<glm::vec2>& trajectoryPoints, const std::string& meshName);
+    
+        // Trajectory meshes for each tank
+        Mesh* tank1TrajectoryMesh;
+        Mesh* tank2TrajectoryMesh;
+
         // Methods
         void GenerateTerrain();  // Function to initialize terrain data
         void RenderTank(float x, float y, float turretAngle, float bodyAngle,

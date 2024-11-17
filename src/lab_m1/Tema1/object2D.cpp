@@ -131,7 +131,7 @@ Mesh* object2D::CreateCloud(const std::string& name, glm::vec3 center, float rad
     std::vector<unsigned int> indices;
 
     // Create a simple cloud shape using circles
-    // We'll create three overlapping circles to form a cloud
+    // Create three overlapping circles to form a cloud
 
     // Circle positions relative to the cloud's center
     glm::vec3 offset1 = glm::vec3(-radius / 2.0f, 0.0f, 0.0f);

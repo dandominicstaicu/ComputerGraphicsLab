@@ -424,23 +424,30 @@ void Tema1::Update(float deltaTimeSeconds)
             float y2 = heightMap[x2];
             float yTerrain = y1 * (1 - t) + y2 * t;
             float terrainHeight = yTerrain + offsetY;
-
+        
             // If projectile is below or touching the terrain
             if (it->position.y <= terrainHeight) {
                 collisionDetected = true;
-
-                // **Modify the terrain to create a crater**
-                int craterCenter = static_cast<int>(x);
-                int start = std::max(0, craterCenter - static_cast<int>(craterRadius));
-                int end = std::min(terrainWidth - 1, craterCenter + static_cast<int>(craterRadius));
-
-                for (int i = start; i <= end; ++i) {
-                    float distance = abs(i - x);
-                    if (distance <= craterRadius) {
-                        // Simple linear falloff
-                        float deformation = (1.0f - (distance / craterRadius)) * craterDepth;
-                        heightMap[i] -= deformation;
-
+        
+                // **Modify the terrain to create a circular crater**
+                float x0 = x;
+                float y0 = it->position.y;
+        
+                int startX = std::max(0, static_cast<int>(x0 - craterRadius));
+                int endX = std::min(terrainWidth - 1, static_cast<int>(x0 + craterRadius));
+        
+                for (int i = startX; i <= endX; ++i) {
+                    float dx = i - x0;
+                    if (abs(dx) <= craterRadius) {
+                        float dy = sqrt(craterRadius * craterRadius - dx * dx);
+                        float craterBottom = y0 - dy;
+        
+                        // Adjust terrain height
+                        float newHeight = craterBottom - offsetY;
+        
+                        // Set the terrain height to the lower of the current height and the crater's bottom
+                        heightMap[i] = std::min(heightMap[i], newHeight);
+        
                         // Ensure the height doesn't go below a minimum value
                         heightMap[i] = std::max(heightMap[i], minTerrainHeight);
                     }

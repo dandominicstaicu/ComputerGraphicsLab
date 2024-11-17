@@ -406,7 +406,7 @@ void Tema1::Update(float deltaTimeSeconds)
                "trapezoid1_tank2", "trapezoid2_tank2",
                "turret_tank2", "cannon_tank2");
     }
-    
+
     for (auto it = projectiles.begin(); it != projectiles.end(); ) {
         it->position += it->velocity * deltaTimeSeconds;
         it->velocity += gravity * deltaTimeSeconds; // Apply gravity
@@ -424,30 +424,30 @@ void Tema1::Update(float deltaTimeSeconds)
             float y2 = heightMap[x2];
             float yTerrain = y1 * (1 - t) + y2 * t;
             float terrainHeight = yTerrain + offsetY;
-        
+
             // If projectile is below or touching the terrain
             if (it->position.y <= terrainHeight) {
                 collisionDetected = true;
-        
+
                 // **Modify the terrain to create a circular crater**
                 float x0 = x;
                 float y0 = it->position.y;
-        
+
                 int startX = std::max(0, static_cast<int>(x0 - craterRadius));
                 int endX = std::min(terrainWidth - 1, static_cast<int>(x0 + craterRadius));
-        
+
                 for (int i = startX; i <= endX; ++i) {
                     float dx = i - x0;
                     if (abs(dx) <= craterRadius) {
                         float dy = sqrt(craterRadius * craterRadius - dx * dx);
                         float craterBottom = y0 - dy;
-        
+
                         // Adjust terrain height
                         float newHeight = craterBottom - offsetY;
-        
+
                         // Set the terrain height to the lower of the current height and the crater's bottom
                         heightMap[i] = std::min(heightMap[i], newHeight);
-        
+
                         // Ensure the height doesn't go below a minimum value
                         heightMap[i] = std::max(heightMap[i], minTerrainHeight);
                     }
@@ -504,6 +504,65 @@ void Tema1::Update(float deltaTimeSeconds)
         }
     }
 
+    // **Terrain Landslide Animation**
+    int neighborhoodRadius = 3; // Adjust for desired smoothness
+
+    // Create a copy of the heightMap to store updated heights
+    std::vector<float> newHeightMap = heightMap;
+
+    // Precompute Gaussian weights
+    float sigma = neighborhoodRadius / 2.0f;
+    std::vector<float> weights(2 * neighborhoodRadius + 1);
+    for (int offset = -neighborhoodRadius; offset <= neighborhoodRadius; ++offset) {
+        float distance = abs(offset);
+        weights[offset + neighborhoodRadius] = exp(-(distance * distance) / (2 * sigma * sigma));
+    }
+
+    for (size_t i = 0; i < heightMap.size(); ++i) {
+        float totalDifference = 0.0f;
+        float totalWeight = 0.0f;
+
+        // Calculate the weighted sum of height differences with neighbors
+        for (int offset = -neighborhoodRadius; offset <= neighborhoodRadius; ++offset) {
+            int neighborIndex = i + offset;
+
+            if (neighborIndex >= 0 && neighborIndex < heightMap.size() && offset != 0) {
+                float weight = weights[offset + neighborhoodRadius];
+                float heightDifference = heightMap[i] - heightMap[neighborIndex];
+                totalDifference += heightDifference * weight;
+                totalWeight += weight;
+            }
+        }
+
+        // Calculate the average weighted height difference
+        if (totalWeight > 0.0f) {
+            float averageDifference = totalDifference / totalWeight;
+
+            // Apply the landslide effect if the average difference exceeds the threshold
+            if (abs(averageDifference) > heightDifferenceThreshold) {
+                // Calculate the amount of height to transfer based on deltaTime
+                float epsilon = transferRate * deltaTimeSeconds;
+
+                // Limit the transfer amount to prevent over-correction
+                float transferAmount = std::min(epsilon, abs(averageDifference) - heightDifferenceThreshold);
+
+                // Adjust the current point's height
+                if (averageDifference > 0) {
+                    newHeightMap[i] -= transferAmount;
+                } else {
+                    newHeightMap[i] += transferAmount;
+                }
+            }
+        }
+    }
+
+    // Update heightMap with the new values
+    heightMap = newHeightMap;
+
+    // Ensure terrain heights do not go below minimum height
+    for (size_t i = 0; i < heightMap.size(); ++i) {
+        heightMap[i] = std::max(heightMap[i], minTerrainHeight);
+    }
 
     // Render Tank 1 and its health bar
     if (tank1Alive) {

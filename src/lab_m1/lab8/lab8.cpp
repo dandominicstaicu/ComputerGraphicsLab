@@ -9,8 +9,8 @@ using namespace m1;
 
 
 /*
- *  To find out more about `FrameStart`, `Update`, `FrameEnd`
- *  and the order in which they are called, see `world.cpp`.
+ *  To find out more about FrameStart, Update, FrameEnd
+ *  and the order in which they are called, see world.cpp.
  */
 
 
@@ -46,7 +46,7 @@ void Lab8::Init()
 
     // Create a shader program for drawing face polygon with the color of the normal
     {
-        Shader *shader = new Shader("LabShader");
+        Shader* shader = new Shader("LabShader");
         shader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "lab8", "shaders", "VertexShader.glsl"), GL_VERTEX_SHADER);
         shader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "lab8", "shaders", "FragmentShader.glsl"), GL_FRAGMENT_SHADER);
         shader->CreateAndLink();
@@ -55,11 +55,19 @@ void Lab8::Init()
 
     // Light & material properties
     {
-        lightPosition = glm::vec3(0, 1, 1);
-        lightDirection = glm::vec3(0, -1, 0);
+        lightPosition[0] = glm::vec3(0, 1, 1);
+        lightDirection[0] = glm::vec3(0, -1, 0);
+
+        lightPosition[1] = glm::vec3(0, 1, -1);
+        lightDirection[1] = glm::normalize(glm::vec3(0, -1, 0));
         materialShininess = 30;
         materialKd = 0.5;
         materialKs = 0.5;
+
+        typeOfLight = 0;
+        angleOX = 0.f;
+        angleOY = 0.f;
+        cutoffAngle = 30.f;
     }
 }
 
@@ -70,7 +78,7 @@ void Lab8::FrameStart()
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glm::ivec2 resolution = window->GetResolution();
+    glm::ivec2 resolution = window->GetResolution(true);
     // Sets the screen area where to draw
     glViewport(0, 0, resolution.x, resolution.y);
 }
@@ -83,7 +91,6 @@ void Lab8::Update(float deltaTimeSeconds)
         modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
         // TODO(student): Add or change the object colors
         RenderSimpleMesh(meshes["sphere"], shaders["LabShader"], modelMatrix);
-
     }
 
     {
@@ -116,8 +123,15 @@ void Lab8::Update(float deltaTimeSeconds)
     // Render the point light in the scene
     {
         glm::mat4 modelMatrix = glm::mat4(1);
-        modelMatrix = glm::translate(modelMatrix, lightPosition);
+        modelMatrix = glm::translate(modelMatrix, lightPosition[0]);
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f));
+        RenderMesh(meshes["sphere"], shaders["Simple"], modelMatrix);
+    }
+
+    {
+        glm::mat4 modelMatrix = glm::mat4(1);
+        modelMatrix = glm::translate(modelMatrix, lightPosition[1]);
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f));
         RenderMesh(meshes["sphere"], shaders["Simple"], modelMatrix);
     }
 }
@@ -129,7 +143,7 @@ void Lab8::FrameEnd()
 }
 
 
-void Lab8::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & modelMatrix, const glm::vec3 &color)
+void Lab8::RenderSimpleMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, const glm::vec3& color)
 {
     if (!mesh || !shader || !shader->GetProgramID())
         return;
@@ -139,10 +153,10 @@ void Lab8::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & modelM
 
     // Set shader uniforms for light properties
     int light_position = glGetUniformLocation(shader->program, "light_position");
-    glUniform3f(light_position, lightPosition.x, lightPosition.y, lightPosition.z);
+    glUniform3fv(light_position, 2, glm::value_ptr(lightPosition[0]));
 
     int light_direction = glGetUniformLocation(shader->program, "light_direction");
-    glUniform3f(light_direction, lightDirection.x, lightDirection.y, lightDirection.z);
+    glUniform3fv(light_direction, 2, glm::value_ptr(lightDirection[0]));
 
     // Set eye position (camera position) uniform
     glm::vec3 eyePosition = GetSceneCamera()->m_transform->GetWorldPosition();
@@ -178,6 +192,12 @@ void Lab8::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & modelM
     int loc_projection_matrix = glGetUniformLocation(shader->program, "Projection");
     glUniformMatrix4fv(loc_projection_matrix, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
+    GLint type = glGetUniformLocation(shader->program, "light_type");
+    glUniform1i(type, typeOfLight);
+
+    GLint cut_off_angle = glGetUniformLocation(shader->program, "cut_off_angle");
+    glUniform1f(cut_off_angle, cutoffAngle);
+
     // Draw the object
     glBindVertexArray(mesh->GetBuffers()->m_VAO);
     glDrawElements(mesh->GetDrawMode(), static_cast<int>(mesh->indices.size()), GL_UNSIGNED_INT, 0);
@@ -186,7 +206,7 @@ void Lab8::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & modelM
 
 /*
  *  These are callback functions. To find more about callbacks and
- *  how they behave, see `input_controller.h`.
+ *  how they behave, see input_controller.h.
  */
 
 
@@ -202,24 +222,71 @@ void Lab8::OnInputUpdate(float deltaTime, int mods)
         forward = glm::normalize(glm::vec3(forward.x, 0, forward.z));
 
         // Control light position using on W, A, S, D, E, Q
-        if (window->KeyHold(GLFW_KEY_W)) lightPosition -= forward * deltaTime * speed;
-        if (window->KeyHold(GLFW_KEY_A)) lightPosition -= right * deltaTime * speed;
-        if (window->KeyHold(GLFW_KEY_S)) lightPosition += forward * deltaTime * speed;
-        if (window->KeyHold(GLFW_KEY_D)) lightPosition += right * deltaTime * speed;
-        if (window->KeyHold(GLFW_KEY_E)) lightPosition += up * deltaTime * speed;
-        if (window->KeyHold(GLFW_KEY_Q)) lightPosition -= up * deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_W)) lightPosition[0].z -= deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_A)) lightPosition[0].x -= deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_S)) lightPosition[0].z += deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_D)) lightPosition[0].x += deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_E)) lightPosition[0].y += deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_Q)) lightPosition[0].y -= deltaTime * speed;
+
+        if (window->KeyHold(GLFW_KEY_I)) lightPosition[1].z -=  deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_J)) lightPosition[1].x -=  deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_K)) lightPosition[1].z +=  deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_L)) lightPosition[1].x +=  deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_9)) lightPosition[1].y +=  deltaTime * speed;
+        if (window->KeyHold(GLFW_KEY_0)) lightPosition[1].y -=  deltaTime * speed;
 
         // TODO(student): Set any other keys that you might need
+        glm::mat4 turn = glm::mat4(1);
+        turn = glm::rotate(turn, angleOY, glm::vec3(0, 1, 0));
+        turn = glm::rotate(turn, angleOX, glm::vec3(1, 0, 0));
 
+        if (window->KeyHold(GLFW_KEY_UP))
+        {
+            angleOX += deltaTime * speed;
+        }
+        if (window->KeyHold(GLFW_KEY_DOWN))
+        {
+            angleOX -= deltaTime * speed;
+        }
+        if (window->KeyHold(GLFW_KEY_LEFT))
+        {
+            angleOY += deltaTime * speed;
+        }
+        if (window->KeyHold(GLFW_KEY_RIGHT))
+        {
+            angleOY -= deltaTime * speed;
+        }
+
+        if (window->KeyHold(GLFW_KEY_SPACE))
+        {
+            cutoffAngle += deltaTime * 20.f;
+            cutoffAngle = cutoffAngle > 360.f ? 360.f : cutoffAngle;
+        }
+        if (window->KeyHold(GLFW_KEY_ENTER))
+        {
+            cutoffAngle -= deltaTime * 20.f;
+            cutoffAngle = cutoffAngle < 0.f ? 0.f : cutoffAngle;
+        }
+
+        lightDirection[0] = glm::vec3(0, -1, 0);
+        lightDirection[0] = glm::vec3(turn * glm::vec4(lightDirection[0], 0));
+
+        lightDirection[1] = glm::vec3(0, -1, 0);
+        lightDirection[1] = glm::vec3(turn * glm::vec4(lightDirection[1], 0));
     }
 }
 
 
 void Lab8::OnKeyPress(int key, int mods)
 {
-    // Add key press event
+    // Add key press event if press F GO TO spot light
 
     // TODO(student): Set keys that you might need
+    if (key == GLFW_KEY_F)
+    {
+        typeOfLight ^= 1;
+    }
 
 }
 

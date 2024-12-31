@@ -36,6 +36,7 @@ namespace m1
         glm::vec3 dronePosition; // The position of the drone
         glm::vec3 droneScale; // Scaling for the drone body
         glm::vec3 rotorScale; // Scaling for the rotors
+        float droneRotationY;
 
      protected:
         implemented::CameraT2 *camera;

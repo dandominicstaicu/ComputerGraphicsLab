@@ -46,6 +46,7 @@ void Tema2::Init()
 
     // Define a test position
     dronePosition = glm::vec3(0, 0, 0);
+    droneRotationY = 0.0f;
 
     {
         Shader* droneShader = new Shader("DroneShader");
@@ -72,69 +73,86 @@ void Tema2::FrameStart()
 
 void Tema2::Update(float deltaTimeSeconds)
 {
+    {
+        // Render the drone's body
+        glm::mat4 modelMatrix = glm::mat4(1);
+        modelMatrix = glm::translate(modelMatrix, dronePosition); // Translate to drone position
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(droneRotationY), glm::vec3(0, 1, 0)); // Rotate around Y-axis
 
-
-    // Render the 1st box (drone body - horizontal box)
-    glm::mat4 modelMatrix = glm::mat4(1);
-    modelMatrix = glm::translate(modelMatrix, dronePosition);
-    modelMatrix = glm::scale(modelMatrix, glm::vec3(3.0f, 0.25f, 0.15f));
-    shaders["DroneShader"]->Use();
-    glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
-    RenderMesh(meshes["box"], shaders["DroneShader"], modelMatrix);
-
-    // Render the second box (drone body - vertical box)
-    glm::mat4 modelMatrix2 = glm::mat4(1);
-    modelMatrix2 = glm::translate(modelMatrix2, dronePosition);
-    modelMatrix2 = glm::rotate(modelMatrix2, glm::radians(90.0f), glm::vec3(0, 1, 0));
-    modelMatrix2 = glm::scale(modelMatrix2, glm::vec3(3.0f, 0.25f, 0.15f));
-    glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
-    RenderMesh(meshes["box"], shaders["DroneShader"], modelMatrix2);
-
-    // Render small cubes at the ends of the horizontal and vertical boxes
-    std::vector<glm::vec3> smallCubePositions = {
-        glm::vec3(1.5f, 0, 0),
-        glm::vec3(-1.5f, 0, 0),
-        glm::vec3(0, 0, 1.5f),
-        glm::vec3(0, 0, -1.5f)
-    };
-
-    for (const auto& pos : smallCubePositions) {
-        glm::mat4 smallCube = glm::mat4(1);
-        smallCube = glm::translate(smallCube, dronePosition + pos);
-        smallCube = glm::scale(smallCube, glm::vec3(0.3f, 0.3f, 0.3f));
+        // Render the horizontal body
+        glm::mat4 bodyMatrix = glm::scale(modelMatrix, glm::vec3(3.0f, 0.25f, 0.15f));
+        shaders["DroneShader"]->Use();
         glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
-        RenderMesh(meshes["box"], shaders["DroneShader"], smallCube);
-    }
+        RenderMesh(meshes["box"], shaders["DroneShader"], bodyMatrix);
 
-    // Render pillars above each small cube
-    for (const auto& pos : smallCubePositions) {
-        glm::mat4 pillar = glm::mat4(1);
-        pillar = glm::translate(pillar, dronePosition + pos + glm::vec3(0, 0.3f, 0)); // Slightly above the small cubes
-        pillar = glm::scale(pillar, glm::vec3(0.1f, 0.3f, 0.1f));
+        // Render the vertical body
+        glm::mat4 verticalBodyMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(0, 1, 0));
+        verticalBodyMatrix = glm::scale(verticalBodyMatrix, glm::vec3(3.0f, 0.25f, 0.15f));
         glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
-        RenderMesh(meshes["box"], shaders["DroneShader"], pillar);
-    }
+        RenderMesh(meshes["box"], shaders["DroneShader"], verticalBodyMatrix);
 
-    // Render propellers above each pillar
-    for (const auto& pos : smallCubePositions) {
-        glm::mat4 propeller = glm::mat4(1);
-        propeller = glm::translate(propeller, dronePosition + pos + glm::vec3(0, 0.475f, 0)); // Above the pillars
-        propeller = glm::scale(propeller, glm::vec3(0.6f, 0.05f, 0.1f));
-        glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.0f, 0.0f, 0.0f); // Black color
-        RenderMesh(meshes["box"], shaders["DroneShader"], propeller);
-    }
+        // Render small cubes at the ends of the drone
+        std::vector<glm::vec3> smallCubePositions = {
+            glm::vec3(1.5f, 0, 0),
+            glm::vec3(-1.5f, 0, 0),
+            glm::vec3(0, 0, 1.5f),
+            glm::vec3(0, 0, -1.5f)
+        };
 
-    // Attention! The `RenderMesh()` function overrides the usual
-    // `RenderMesh()` that we've been using up until now. This new
-    // function uses the view matrix from the camera that you just
-    // implemented, and the local projection matrix.
+        for (const auto& pos : smallCubePositions) {
+            glm::mat4 smallCube = glm::mat4(1);
+            smallCube = glm::translate(modelMatrix, pos);
+            smallCube = glm::scale(smallCube, glm::vec3(0.3f, 0.3f, 0.3f));
+            glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
+            RenderMesh(meshes["box"], shaders["DroneShader"], smallCube);
+        }
+
+        // Render pillars above each small cube
+        for (const auto& pos : smallCubePositions) {
+            glm::mat4 pillar = glm::mat4(1);
+            pillar = glm::translate(modelMatrix, pos + glm::vec3(0, 0.3f, 0)); // Above small cubes
+            pillar = glm::scale(pillar, glm::vec3(0.1f, 0.3f, 0.1f));
+            glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
+            RenderMesh(meshes["box"], shaders["DroneShader"], pillar);
+        }
+
+        // Render propellers above each pillar
+        for (const auto& pos : smallCubePositions) {
+            glm::mat4 propeller = glm::mat4(1);
+            propeller = glm::translate(modelMatrix, pos + glm::vec3(0, 0.475f, 0)); // Above pillars
+            propeller = glm::rotate(propeller, glm::radians(rotorAngle), glm::vec3(0, 1, 0)); // Rotate propellers
+            propeller = glm::scale(propeller, glm::vec3(0.6f, 0.05f, 0.1f));
+            glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.0f, 0.0f, 0.0f); // Black color
+            RenderMesh(meshes["box"], shaders["DroneShader"], propeller);
+        }
+
+        // Update rotor angle for animation
+        rotorAngle += deltaTimeSeconds * 360.0f; // Adjust speed if needed
+        if (rotorAngle >= 360.0f) rotorAngle -= 360.0f;
+    }
 
     {
+        // Render local coordinate system axes
+        glm::mat4 axisMatrix = glm::mat4(1);
+        axisMatrix = glm::translate(axisMatrix, dronePosition);
+        axisMatrix = glm::rotate(axisMatrix, glm::radians(droneRotationY), glm::vec3(0, 1, 0)); // Align with drone's rotation
 
+        // Render Ox (Red)
+        glm::mat4 oxMatrix = glm::scale(axisMatrix * glm::translate(glm::mat4(1), glm::vec3(1.0f, 0, 0)), glm::vec3(1.0f, 0.05f, 0.05f));
+        glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 1.0f, 0.0f, 0.0f); // Red
+        RenderMesh(meshes["box"], shaders["DroneShader"], oxMatrix);
+
+        // Render Oy (Green)
+        glm::mat4 oyMatrix = glm::scale(axisMatrix * glm::translate(glm::mat4(1), glm::vec3(0, 1.0f, 0)), glm::vec3(0.05f, 1.0f, 0.05f));
+        glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.0f, 1.0f, 0.0f); // Green
+        RenderMesh(meshes["box"], shaders["DroneShader"], oyMatrix);
+
+        // Render Oz (Blue)
+        glm::mat4 ozMatrix = glm::scale(axisMatrix * glm::translate(glm::mat4(1), glm::vec3(0, 0, 1.0f)), glm::vec3(0.05f, 0.05f, 1.0f));
+        glUniform3f(glGetUniformLocation(shaders["DroneShader"]->GetProgramID(), "object_color"), 0.0f, 0.0f, 1.0f); // Blue
+        RenderMesh(meshes["box"], shaders["DroneShader"], ozMatrix);
     }
 
-    // Render the camera target. This is useful for understanding where
-    // the rotation point is, when moving in third-person camera mode.
 }
 
 
@@ -195,6 +213,64 @@ void Tema2::OnInputUpdate(float deltaTime, int mods)
         }
     }
 
+    float droneSpeed = 2.0f;
+    float rotationSpeed = 90.0f; // Degrees per second
+
+    // Translate along local axes
+    if (window->KeyHold(GLFW_KEY_W)) {
+        // Move forward along Oz
+        dronePosition += glm::vec3(
+            -sin(glm::radians(droneRotationY)), 0,
+            -cos(glm::radians(droneRotationY))
+        ) * droneSpeed * deltaTime;
+    }
+
+    if (window->KeyHold(GLFW_KEY_S)) {
+        // Move backward along Oz
+        dronePosition -= glm::vec3(
+            -sin(glm::radians(droneRotationY)), 0,
+            -cos(glm::radians(droneRotationY))
+        ) * droneSpeed * deltaTime;
+    }
+
+    if (window->KeyHold(GLFW_KEY_D)) {
+        // Move right along Ox
+        dronePosition += glm::vec3(
+            cos(glm::radians(droneRotationY)), 0,
+            -sin(glm::radians(droneRotationY))
+        ) * droneSpeed * deltaTime;
+    }
+
+    if (window->KeyHold(GLFW_KEY_A)) {
+        // Move left along Ox
+        dronePosition -= glm::vec3(
+            cos(glm::radians(droneRotationY)), 0,
+            -sin(glm::radians(droneRotationY))
+        ) * droneSpeed * deltaTime;
+    }
+
+    if (window->KeyHold(GLFW_KEY_Q)) {
+        // Move up along Oy
+        dronePosition += glm::vec3(0, 1, 0) * droneSpeed * deltaTime;
+    }
+
+    if (window->KeyHold(GLFW_KEY_E)) {
+        // Move down along Oy
+        dronePosition -= glm::vec3(0, 1, 0) * droneSpeed * deltaTime;
+    }
+
+    // Rotate around Oy
+    if (window->KeyHold(GLFW_KEY_LEFT)) {
+        droneRotationY += rotationSpeed * deltaTime;
+    }
+
+    if (window->KeyHold(GLFW_KEY_RIGHT)) {
+        droneRotationY -= rotationSpeed * deltaTime;
+    }
+
+    // Keep rotation angle within [0, 360)
+    if (droneRotationY >= 360.0f) droneRotationY -= 360.0f;
+    if (droneRotationY < 0.0f) droneRotationY += 360.0f;
 
 }
 

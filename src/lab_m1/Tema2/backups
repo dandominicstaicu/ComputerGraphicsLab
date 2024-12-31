@@ -1,0 +1,114 @@
+in update:
+    // // Render the 1st box
+    // glm::mat4 modelMatrix = glm::mat4(1);
+
+    // // Translate to the drone's position
+    // modelMatrix = glm::translate(modelMatrix, dronePosition);
+
+    // // Scale to make it a rectangular parallelepiped
+    // modelMatrix = glm::scale(modelMatrix, glm::vec3(3.0f, 0.25f, 0.15f)); // Width: 3, Height: 0.25, Depth: 0.15
+
+    // shaders["Simple"]->Use();
+    // glUniform3f(glGetUniformLocation(shaders["Simple"]->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Black color
+    // RenderMesh(meshes["box"], shaders["Simple"], modelMatrix);
+
+    
+    // // Render the second box (vertical box)
+    // glm::mat4 modelMatrix2 = glm::mat4(1);
+
+    // // Translate to the same position as the first box
+    // modelMatrix2 = glm::translate(modelMatrix2, dronePosition);
+
+    // // Rotate 90 degrees around the Z-axis
+    // modelMatrix2 = glm::rotate(modelMatrix2, glm::radians(90.0f), glm::vec3(0, 1, 0));
+
+    // // Scale to the same dimensions as the first box
+    // modelMatrix2 = glm::scale(modelMatrix2, glm::vec3(3.0f, 0.25f, 0.15f));
+
+    // glUniform3f(glGetUniformLocation(shaders["Simple"]->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Black color
+    // RenderMesh(meshes["box"], shaders["Simple"], modelMatrix2);
+
+    // // Render small cubes at the ends of the horizontal box
+    // glm::mat4 smallCube1 = glm::mat4(1);
+    // smallCube1 = glm::translate(smallCube1, dronePosition + glm::vec3(1.5f, 0, 0)); // End of the horizontal box
+    // smallCube1 = glm::scale(smallCube1, glm::vec3(0.3f, 0.3f, 0.3f)); // Small cube dimensions
+    // RenderMesh(meshes["box"], shaders["Simple"], smallCube1);
+
+    // glm::mat4 smallCube2 = glm::mat4(1);
+    // smallCube2 = glm::translate(smallCube2, dronePosition - glm::vec3(1.5f, 0, 0)); // Other end of the horizontal box
+    // smallCube2 = glm::scale(smallCube2, glm::vec3(0.3f, 0.3f, 0.3f));
+    // RenderMesh(meshes["box"], shaders["Simple"], smallCube2);
+
+    // // Render small cubes at the ends of the vertical box
+    // glm::mat4 smallCube3 = glm::mat4(1);
+    // smallCube3 = glm::translate(smallCube3, dronePosition + glm::vec3(0, 0, 1.5f)); // End of the vertical box
+    // smallCube3 = glm::scale(smallCube3, glm::vec3(0.3f, 0.3f, 0.3f));
+    // RenderMesh(meshes["box"], shaders["Simple"], smallCube3);
+
+    // glm::mat4 smallCube4 = glm::mat4(1);
+    // smallCube4 = glm::translate(smallCube4, dronePosition - glm::vec3(0, 0, 1.5f)); // Other end of the vertical box
+    // smallCube4 = glm::scale(smallCube4, glm::vec3(0.3f, 0.3f, 0.3f));
+    // RenderMesh(meshes["box"], shaders["Simple"], smallCube4);
+
+    //     // Render pillars above each small cube
+    // glm::mat4 pillar1 = glm::mat4(1);
+    // pillar1 = glm::translate(pillar1, dronePosition + glm::vec3(1.5f, 0.3f, 0)); // Above the small cube
+    // pillar1 = glm::scale(pillar1, glm::vec3(0.1f, 0.3f, 0.1f)); // Narrow base, tall height
+    // RenderMesh(meshes["box"], shaders["Simple"], pillar1);
+
+    // glm::mat4 pillar2 = glm::mat4(1);
+    // pillar2 = glm::translate(pillar2, dronePosition - glm::vec3(1.5f, -0.3f, 0)); // Above the small cube
+    // pillar2 = glm::scale(pillar2, glm::vec3(0.1f, 0.3f, 0.1f));
+    // RenderMesh(meshes["box"], shaders["Simple"], pillar2);
+
+    // glm::mat4 pillar3 = glm::mat4(1);
+    // pillar3 = glm::translate(pillar3, dronePosition + glm::vec3(0, 0.3f, 1.5f)); // Above the small cube
+    // pillar3 = glm::scale(pillar3, glm::vec3(0.1f, 0.3f, 0.1f));
+    // RenderMesh(meshes["box"], shaders["Simple"], pillar3);
+
+    // glm::mat4 pillar4 = glm::mat4(1);
+    // pillar4 = glm::translate(pillar4, dronePosition - glm::vec3(0, -0.3f, 1.5f)); // Above the small cube
+    // pillar4 = glm::scale(pillar4, glm::vec3(0.1f, 0.3f, 0.1f));
+    // RenderMesh(meshes["box"], shaders["Simple"], pillar4);
+
+    // // Render propellers above each pillar
+    // glm::mat4 propeller1 = glm::mat4(1);
+    // propeller1 = glm::translate(propeller1, dronePosition + glm::vec3(1.5f, 0.45f, 0)); // Top of pillar1
+    // propeller1 = glm::scale(propeller1, glm::vec3(0.6f, 0.05f, 0.1f)); // Thin and wide
+    // RenderMesh(meshes["box"], shaders["Simple"], propeller1);
+
+    // glm::mat4 propeller2 = glm::mat4(1);
+    // propeller2 = glm::translate(propeller2, dronePosition - glm::vec3(1.5f, -0.45f, 0)); // Top of pillar2
+    // propeller2 = glm::scale(propeller2, glm::vec3(0.6f, 0.05f, 0.1f));
+    // RenderMesh(meshes["box"], shaders["Simple"], propeller2);
+
+    // glm::mat4 propeller3 = glm::mat4(1);
+    // propeller3 = glm::translate(propeller3, dronePosition + glm::vec3(0, 0.45f, 1.5f)); // Top of pillar3
+    // propeller3 = glm::scale(propeller3, glm::vec3(0.6f, 0.05f, 0.1f));
+    // RenderMesh(meshes["box"], shaders["Simple"], propeller3);
+
+    // glm::mat4 propeller4 = glm::mat4(1);
+    // propeller4 = glm::translate(propeller4, dronePosition - glm::vec3(0, -0.45f, 1.5f)); // Top of pillar4
+    // propeller4 = glm::scale(propeller4, glm::vec3(0.6f, 0.05f, 0.1f));
+    // RenderMesh(meshes["box"], shaders["Simple"], propeller4);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    

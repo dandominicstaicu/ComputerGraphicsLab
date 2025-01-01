@@ -30,9 +30,6 @@ void Tema2::Init()
     camera = new implemented::CameraT2();
     camera->Set(glm::vec3(0, 2, 3.5f), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0));
 
-    // camera->Set(glm::vec3(5, 5, 10), glm::vec3(5, 0, 5), glm::vec3(0, 1, 0));
-    // camera->Set(glm::vec3(5, 5, 15), glm::vec3(5, 0, 5), glm::vec3(0, 1, 0));
-
     projectionMatrix = glm::perspective(RADIANS(60), window->props.aspectRatio, Z_NEAR, Z_FAR);
 
     {
@@ -93,10 +90,6 @@ void Tema2::Update(float deltaTimeSeconds)
 
     // Render the terrain
     RenderMesh(terrain.GetMesh(), shaders["TerrainShader"], glm::mat4(1));
-
-    // glm::mat4 modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0, 0, 0));
-    // modelMatrix = glm::scale(modelMatrix, glm::vec3(10.0f)); // Scale up the terrain
-    // RenderMesh(terrain.GetMesh(), shaders["TerrainShader"], modelMatrix);
 }
 
 
@@ -118,7 +111,6 @@ void Tema2::RenderMesh(Mesh * mesh, Shader * shader, const glm::mat4 & modelMatr
 
 
     mesh->Render();
-    // std::cout << "Rendering mesh: " << mesh->GetMeshID() << std::endl;
 }
 
 /*

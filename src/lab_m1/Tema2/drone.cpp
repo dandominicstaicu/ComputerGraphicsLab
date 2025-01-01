@@ -56,7 +56,7 @@ namespace m1
         // Render drone components
         RenderBody(modelMatrix);
         RenderPropellers(modelMatrix);
-        RenderAxes(viewMatrix, projectionMatrix);
+        // RenderAxes(viewMatrix, projectionMatrix);
     }
 
     void Drone::RenderBody(const glm::mat4& modelMatrix)

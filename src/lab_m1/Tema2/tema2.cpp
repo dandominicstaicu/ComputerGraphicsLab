@@ -30,6 +30,9 @@ void Tema2::Init()
     camera = new implemented::CameraT2();
     camera->Set(glm::vec3(0, 2, 3.5f), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0));
 
+    // camera->Set(glm::vec3(5, 5, 10), glm::vec3(5, 0, 5), glm::vec3(0, 1, 0));
+    // camera->Set(glm::vec3(5, 5, 15), glm::vec3(5, 0, 5), glm::vec3(0, 1, 0));
+
     projectionMatrix = glm::perspective(RADIANS(60), window->props.aspectRatio, Z_NEAR, Z_FAR);
 
     {
@@ -46,15 +49,32 @@ void Tema2::Init()
         shaders[droneShader->GetName()] = droneShader;
     }
 
+    {
+        Shader* terrainShader = new Shader("TerrainShader");
+        terrainShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "TerrainVertexShader.glsl"), GL_VERTEX_SHADER);
+        terrainShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "TerrainFragmentShader.glsl"), GL_FRAGMENT_SHADER);
+        terrainShader->CreateAndLink();
+        shaders[terrainShader->GetName()] = terrainShader;
+    }
+
     // Initialize the Drone class
     drone.Init(meshes, shaders, shaders["DroneShader"], this);
+
+    // Initialize the terrain
+    terrain.GenerateGrid(200, 200); // Example grid resolution
+
+
+    meshes["terrain"] = terrain.GetMesh();
 }
 
 
 void Tema2::FrameStart()
 {
+    glEnable(GL_DEPTH_TEST);
+    
+
     // Clears the color buffer (using the previously set color) and depth buffer
-    glClearColor(0, 0, 0, 1);
+    glClearColor(0.1f, 0.3f, 0.5f, 1); 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glm::ivec2 resolution = window->GetResolution();
@@ -70,6 +90,13 @@ void Tema2::Update(float deltaTimeSeconds)
 
     // Render the drone
     drone.Render(camera->GetViewMatrix(), projectionMatrix);
+
+    // Render the terrain
+    RenderMesh(terrain.GetMesh(), shaders["TerrainShader"], glm::mat4(1));
+
+    // glm::mat4 modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0, 0, 0));
+    // modelMatrix = glm::scale(modelMatrix, glm::vec3(10.0f)); // Scale up the terrain
+    // RenderMesh(terrain.GetMesh(), shaders["TerrainShader"], modelMatrix);
 }
 
 
@@ -86,10 +113,12 @@ void Tema2::RenderMesh(Mesh * mesh, Shader * shader, const glm::mat4 & modelMatr
 
     shader->Use();
     glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
-    // glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(camera->GetViewMatrix()));
-    // glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(camera->GetViewMatrix()));
+    glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
 
     mesh->Render();
+    // std::cout << "Rendering mesh: " << mesh->GetMeshID() << std::endl;
 }
 
 /*
@@ -132,7 +161,6 @@ void Tema2::OnInputUpdate(float deltaTime, int mods)
 
     float droneSpeed = 2.0f;
     float rotationSpeed = 90.0f; // Degrees per second
-
 
     if (!window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT)) {
         // Translate along local axes

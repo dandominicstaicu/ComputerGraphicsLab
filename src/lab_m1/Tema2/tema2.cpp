@@ -1,9 +1,10 @@
 #include "lab_m1/Tema2/tema2.h"
-#include "lab_m1/Tema2/drone.h"
 
 #include <vector>
 #include <string>
 #include <iostream>
+#include <random>
+#include <ctime>
 
 using namespace std;
 using namespace m1;
@@ -22,6 +23,15 @@ Tema2::Tema2()
 
 Tema2::~Tema2()
 {
+    // Clean up obstacles
+    for(auto& obstacle : obstacles)
+    {
+        delete obstacle;
+    }
+    obstacles.clear();
+
+    // Clean up camera
+    delete camera;
 }
 
 
@@ -36,6 +46,20 @@ void Tema2::Init()
         Mesh* mesh = new Mesh("box");
         mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "box.obj");
         meshes[mesh->GetMeshID()] = mesh;
+    }
+
+    // Load Cylinder Mesh for Trunk
+    {
+        Mesh* cylinder = new Mesh("cylinder");
+        cylinder->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "custom"), "cylinder.obj");
+        meshes[cylinder->GetMeshID()] = cylinder;
+    }
+
+    // Load Cone Mesh for Foliage
+    {
+        Mesh* cone = new Mesh("cones");
+        cone->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "custom"), "cones.obj");
+        meshes[cone->GetMeshID()] = cone;
     }
 
     {
@@ -54,14 +78,64 @@ void Tema2::Init()
         shaders[terrainShader->GetName()] = terrainShader;
     }
 
+    {
+        Shader* obstacleShader = new Shader("ObstacleShader");
+        obstacleShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "ObstacleVertexShader.glsl"), GL_VERTEX_SHADER);
+        obstacleShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "ObstacleFragmentShader.glsl"), GL_FRAGMENT_SHADER);
+        obstacleShader->CreateAndLink();
+        shaders[obstacleShader->GetName()] = obstacleShader;
+    }
+
+    int gridResolution = 50;
+
     // Initialize the Drone class
     drone.Init(meshes, shaders, shaders["DroneShader"], this);
 
     // Initialize the terrain
-    terrain.GenerateGrid(200, 200); // Example grid resolution
-
+    terrain.GenerateGrid(gridResolution, gridResolution); 
 
     meshes["terrain"] = terrain.GetMesh();
+
+    // Procedurally generate obstacles
+    const int numObstacles = 5;
+    const float minDistance = 10.0f; // Minimum distance between obstacles
+    const float terrainHalfSize = gridResolution / 2.0; // Half-size of terrain grid
+
+    // Initialize random number generators
+    std::mt19937 rng(static_cast<unsigned int>(std::time(nullptr)));
+    std::uniform_real_distribution<float> distPos(-terrainHalfSize + 10.0f, terrainHalfSize - 10.0f); // Keep obstacles within terrain
+    std::uniform_real_distribution<float> distScale(10.0f, 15.0f); // Random scale for variety
+
+    std::vector<glm::vec3> placedPositions;
+
+    for(int i = 0; i < numObstacles; ++i)
+    {
+        bool positionOK = false;
+        glm::vec3 pos;
+        float scale;
+
+        while(!positionOK)
+        {
+            pos = glm::vec3(distPos(rng), 0.0f, distPos(rng));
+            scale = distScale(rng);
+
+            positionOK = true;
+            for(const auto& existingPos : placedPositions)
+            {
+                if(CalculateDistance(pos, existingPos) < minDistance)
+                {
+                    positionOK = false;
+                    break;
+                }
+            }
+        }
+
+        placedPositions.emplace_back(pos);
+
+        // Create and store the obstacle
+        Obstacle* obstacle = new Obstacle(meshes, shaders, shaders["ObstacleShader"], pos, scale);
+        obstacles.push_back(obstacle);
+    }
 }
 
 
@@ -90,6 +164,13 @@ void Tema2::Update(float deltaTimeSeconds)
 
     // Render the terrain
     RenderMesh(terrain.GetMesh(), shaders["TerrainShader"], glm::mat4(1));
+
+    // Render all obstacles
+    for(auto& obstacle : obstacles) {
+        obstacle->Render(camera->GetViewMatrix(), projectionMatrix);
+    }
+
+
 }
 
 
@@ -256,4 +337,9 @@ void Tema2::OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY)
 
 void Tema2::OnWindowResize(int width, int height)
 {
+}
+
+float Tema2::CalculateDistance(const glm::vec3& a, const glm::vec3& b)
+{
+    return glm::distance(glm::vec2(a.x, a.z), glm::vec2(b.x, b.z));
 }

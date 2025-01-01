@@ -4,12 +4,15 @@
 #include "lab_m1/Tema2/t2_camera.h"
 #include "lab_m1/Tema2/drone.h"
 #include "lab_m1/Tema2/terrain.h"
+#include "lab_m1/Tema2/obstacle.h"
 
 #define Z_FAR		(200.f)
 #define Z_NEAR		(.01f)
 
 namespace m1
 {
+   class Obstacle; 
+
     class Tema2 : public gfxc::SimpleScene
     {
      public:
@@ -33,8 +36,12 @@ namespace m1
         void OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY) override;
         void OnWindowResize(int width, int height) override;
 
-        Drone drone;
-        Terrain terrain;
+         float CalculateDistance(const glm::vec3& a, const glm::vec3& b);
+
+
+         Drone drone;
+         Terrain terrain;
+         std::vector<Obstacle*> obstacles; // Vector to store obstacles
 
      protected:
         implemented::CameraT2 *camera;

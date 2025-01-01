@@ -7,6 +7,9 @@
 #include "lab_m1/Tema2/obstacle.h"
 #include "lab_m1/Tema2/building.h"
 
+#include <random>
+#include <ctime>
+
 #define Z_FAR		(200.f)
 #define Z_NEAR		(.01f)
 
@@ -38,6 +41,24 @@ namespace m1
         void OnWindowResize(int width, int height) override;
 
          float CalculateDistance(const glm::vec3& a, const glm::vec3& b);
+
+         void GenerateBuildings(int numBuildings,
+                              float minDistance,
+                              float terrainHalfSize,
+                              int maxPlacementAttempts,
+                              std::mt19937 &rng,
+                              std::uniform_real_distribution<float> &distPos,
+                              std::uniform_real_distribution<float> &distScaleBuildings,
+                              std::vector<glm::vec3> &placedPositions);
+
+         void GenerateTrees(int numTrees,
+                          float minDistance,
+                          float terrainHalfSize,
+                          int maxPlacementAttempts,
+                          std::mt19937 &rng,
+                          std::uniform_real_distribution<float> &distPos,
+                          std::uniform_real_distribution<float> &distScaleTrees,
+                          std::vector<glm::vec3> &placedPositions);
 
 
          Drone drone;

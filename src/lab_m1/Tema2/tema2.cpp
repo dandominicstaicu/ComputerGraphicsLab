@@ -3,17 +3,10 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <random>
-#include <ctime>
+
 
 using namespace std;
 using namespace m1;
-
-
-/*
- *  To find out more about `FrameStart`, `Update`, `FrameEnd`
- *  and the order in which they are called, see `world.cpp`.
- */
 
 
 static Mesh* CreateCube(const std::string& name)
@@ -81,6 +74,7 @@ void Tema2::Init()
 
     projectionMatrix = glm::perspective(RADIANS(60), window->props.aspectRatio, Z_NEAR, Z_FAR);
 
+    // Create our own procedural cube geometry
     {
         Mesh* cube = CreateCube("cube");
         meshes[cube->GetMeshID()] = cube;
@@ -168,86 +162,26 @@ void Tema2::Init()
 
     const int maxPlacementAttempts = 100; // Maximum attempts to place an obstacle
 
-    // 1) Generate TREES
-    for (int i = 0; i < numTrees; ++i)
-    {
-        bool positionOK = false;
-        glm::vec3 pos;
-        float scale;
-        int attempts = 0;
+        // Generate Trees
+    GenerateTrees(numTrees,
+                  minDistance,
+                  terrainHalfSize,
+                  maxPlacementAttempts,
+                  rng,
+                  distPos,
+                  distScaleTrees,
+                  placedPositions);
 
-        while (!positionOK && attempts < maxPlacementAttempts)
-        {
-            pos = glm::vec3(distPos(rng), 0.0f, distPos(rng));
-            scale = distScaleTrees(rng);
-
-            // Ensure no overlap with existing obstacles
-            positionOK = true;
-            for (const auto& existingPos : placedPositions)
-            {
-                if (CalculateDistance(pos, existingPos) < minDistance)
-                {
-                    positionOK = false;
-                    break;
-                }
-            }
-
-            attempts++;
-        }
-
-        if (positionOK)
-        {
-            placedPositions.emplace_back(pos);
-            Obstacle* tree = new Obstacle(meshes, shaders, shaders["ObstacleShader"], pos, scale);
-            obstacles.push_back(tree);
-        }
-        else
-        {
-            std::cerr << "Failed to place tree " << i + 1 << " after " << maxPlacementAttempts << " attempts.\n";
-        }
-    }
-
-    // 2) Generate BUILDINGS
-    for (int i = 0; i < numBuildings; ++i)
-    {
-        bool positionOK = false;
-        glm::vec3 pos;
-        float scale;
-        int attempts = 0;
-
-        while (!positionOK && attempts < maxPlacementAttempts)
-        {
-            pos = glm::vec3(distPos(rng), 0.0f, distPos(rng));
-            scale = distScaleBuildings(rng);
-
-            // Ensure no overlap with existing obstacles
-            positionOK = true;
-            for (const auto& existingPos : placedPositions)
-            {
-                if (CalculateDistance(pos, existingPos) < minDistance)
-                {
-                    positionOK = false;
-                    break;
-                }
-            }
-
-            attempts++;
-        }
-
-        if (positionOK)
-        {
-            placedPositions.emplace_back(pos);
-            Building* building = new Building(meshes, shaders, shaders["ObstacleShader"], pos, scale);
-            obstacles.push_back(building);
-        }
-        else
-        {
-            std::cerr << "Failed to place building " << i + 1 << " after " << maxPlacementAttempts << " attempts.\n";
-        }
-    }
+    // Generate Buildings
+    GenerateBuildings(numBuildings,
+                      minDistance,
+                      terrainHalfSize,
+                      maxPlacementAttempts,
+                      rng,
+                      distPos,
+                      distScaleBuildings,
+                      placedPositions);
 }
-
-
 
 void Tema2::FrameStart()
 {
@@ -268,6 +202,15 @@ void Tema2::Update(float deltaTimeSeconds)
 {
     // Update the drone state
     drone.Update(deltaTimeSeconds);
+
+    // Collision check with the terrain
+    GLfloat terrainTreshold = 1.0f;
+    glm::vec3 dronePos = drone.GetPosition();
+    if (dronePos.y < terrainTreshold) {     
+        // Clamp the Y position to 0 so it never goes below ground
+        dronePos.y = terrainTreshold;
+        drone.SetPosition(dronePos);
+    }
 
     // Render the drone
     drone.Render(camera->GetViewMatrix(), projectionMatrix);
@@ -453,3 +396,102 @@ float Tema2::CalculateDistance(const glm::vec3& a, const glm::vec3& b)
 {
     return glm::distance(glm::vec2(a.x, a.z), glm::vec2(b.x, b.z));
 }
+
+void Tema2::GenerateTrees(int numTrees,
+                          float minDistance,
+                          float terrainHalfSize,
+                          int maxPlacementAttempts,
+                          std::mt19937 &rng,
+                          std::uniform_real_distribution<float> &distPos,
+                          std::uniform_real_distribution<float> &distScaleTrees,
+                          std::vector<glm::vec3> &placedPositions)
+{
+    for (int i = 0; i < numTrees; ++i)
+    {
+        bool positionOK = false;
+        glm::vec3 pos;
+        float scale;
+        int attempts = 0;
+
+        while (!positionOK && attempts < maxPlacementAttempts)
+        {
+            pos = glm::vec3(distPos(rng), 0.0f, distPos(rng));
+            scale = distScaleTrees(rng);
+
+            // Ensure no overlap with existing obstacles
+            positionOK = true;
+            for (const auto& existingPos : placedPositions)
+            {
+                if (CalculateDistance(pos, existingPos) < minDistance)
+                {
+                    positionOK = false;
+                    break;
+                }
+            }
+
+            attempts++;
+        }
+
+        if (positionOK)
+        {
+            placedPositions.emplace_back(pos);
+            Obstacle* tree = new Obstacle(meshes, shaders, shaders["ObstacleShader"], pos, scale);
+            obstacles.push_back(tree);
+        }
+        else
+        {
+            std::cerr << "Failed to place tree " << i + 1
+                      << " after " << maxPlacementAttempts << " attempts.\n";
+        }
+    }
+}
+
+void Tema2::GenerateBuildings(int numBuildings,
+                              float minDistance,
+                              float terrainHalfSize,
+                              int maxPlacementAttempts,
+                              std::mt19937 &rng,
+                              std::uniform_real_distribution<float> &distPos,
+                              std::uniform_real_distribution<float> &distScaleBuildings,
+                              std::vector<glm::vec3> &placedPositions)
+{
+    for (int i = 0; i < numBuildings; ++i)
+    {
+        bool positionOK = false;
+        glm::vec3 pos;
+        float scale;
+        int attempts = 0;
+
+        while (!positionOK && attempts < maxPlacementAttempts)
+        {
+            pos = glm::vec3(distPos(rng), 0.0f, distPos(rng));
+            scale = distScaleBuildings(rng);
+
+            // Ensure no overlap with existing obstacles
+            positionOK = true;
+            for (const auto& existingPos : placedPositions)
+            {
+                if (CalculateDistance(pos, existingPos) < minDistance)
+                {
+                    positionOK = false;
+                    break;
+                }
+            }
+
+            attempts++;
+        }
+
+        if (positionOK)
+        {
+            placedPositions.emplace_back(pos);
+            Building* building = new Building(meshes, shaders, shaders["ObstacleShader"], pos, scale);
+            obstacles.push_back(building);
+        }
+        else
+        {
+            std::cerr << "Failed to place building " << i + 1
+                      << " after " << maxPlacementAttempts << " attempts.\n";
+        }
+    }
+}
+

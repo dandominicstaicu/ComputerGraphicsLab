@@ -14,7 +14,6 @@ namespace m1
 
     Drone::~Drone()
     {
-        // Assuming Tema2 manages the lifetime of meshes and shaders
     }
 
     void Drone::Init(std::unordered_map<std::string, Mesh*>& meshesMap,

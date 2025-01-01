@@ -1,9 +1,10 @@
 #pragma once
 
+#include <unordered_map>
 #include "core/gpu/mesh.h"
-#include "lab_m1/Tema2/tema2.h"
 #include <glm/glm.hpp>
 #include <vector>
+#include "components/simple_scene.h"
 
 namespace m1
 {
@@ -19,9 +20,11 @@ namespace m1
         glm::vec3 GetPosition() const { return position; }
         float GetScale() const { return scale; }
 
-    private:
+    protected:
         std::vector<std::pair<Mesh*, glm::mat4>> components; // Each component mesh and its model matrix
         std::vector<glm::vec3> componentColors;
+        
+    private:
         Shader* shader;
         glm::vec3 position;
         float scale;

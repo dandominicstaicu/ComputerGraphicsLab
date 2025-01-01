@@ -20,7 +20,6 @@ namespace m1
             trunkModel = glm::scale(trunkModel, glm::vec3(scale * 0.2f, scale * 0.2f, scale * .38f));
             components.emplace_back(trunkMesh, trunkModel);
             componentColors.emplace_back(glm::vec3(0.55f, 0.27f, 0.07f)); // Brown color
-
         }
     
         {

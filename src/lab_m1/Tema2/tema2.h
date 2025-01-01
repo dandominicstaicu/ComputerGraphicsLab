@@ -5,6 +5,7 @@
 #include "lab_m1/Tema2/drone.h"
 #include "lab_m1/Tema2/terrain.h"
 #include "lab_m1/Tema2/obstacle.h"
+#include "lab_m1/Tema2/building.h"
 
 #define Z_FAR		(200.f)
 #define Z_NEAR		(.01f)

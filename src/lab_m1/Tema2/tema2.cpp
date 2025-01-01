@@ -42,6 +42,7 @@ void Tema2::Init()
 
     projectionMatrix = glm::perspective(RADIANS(60), window->props.aspectRatio, Z_NEAR, Z_FAR);
 
+    // Load Box Mesh for Buildings
     {
         Mesh* mesh = new Mesh("box");
         mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "box.obj");
@@ -62,11 +63,15 @@ void Tema2::Init()
         meshes[cone->GetMeshID()] = cone;
     }
 
+    // Load Shaders
     {
         Shader* droneShader = new Shader("DroneShader");
         droneShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "DroneVertexShader.glsl"), GL_VERTEX_SHADER);
         droneShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "DroneFragmentShader.glsl"), GL_FRAGMENT_SHADER);
-        droneShader->CreateAndLink();
+        if (!droneShader->CreateAndLink())
+        {
+            std::cerr << "Failed to create and link DroneShader.\n";
+        }
         shaders[droneShader->GetName()] = droneShader;
     }
 
@@ -74,7 +79,10 @@ void Tema2::Init()
         Shader* terrainShader = new Shader("TerrainShader");
         terrainShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "TerrainVertexShader.glsl"), GL_VERTEX_SHADER);
         terrainShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "TerrainFragmentShader.glsl"), GL_FRAGMENT_SHADER);
-        terrainShader->CreateAndLink();
+        if (!terrainShader->CreateAndLink())
+        {
+            std::cerr << "Failed to create and link TerrainShader.\n";
+        }
         shaders[terrainShader->GetName()] = terrainShader;
     }
 
@@ -82,11 +90,14 @@ void Tema2::Init()
         Shader* obstacleShader = new Shader("ObstacleShader");
         obstacleShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "ObstacleVertexShader.glsl"), GL_VERTEX_SHADER);
         obstacleShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "ObstacleFragmentShader.glsl"), GL_FRAGMENT_SHADER);
-        obstacleShader->CreateAndLink();
+        if (!obstacleShader->CreateAndLink())
+        {
+            std::cerr << "Failed to create and link ObstacleShader.\n";
+        }
         shaders[obstacleShader->GetName()] = obstacleShader;
     }
 
-    int gridResolution = 50;
+    int gridResolution = 86;
 
     // Initialize the Drone class
     drone.Init(meshes, shaders, shaders["DroneShader"], this);
@@ -97,46 +108,101 @@ void Tema2::Init()
     meshes["terrain"] = terrain.GetMesh();
 
     // Procedurally generate obstacles
-    const int numObstacles = 5;
-    const float minDistance = 10.0f; // Minimum distance between obstacles
-    const float terrainHalfSize = gridResolution / 2.0; // Half-size of terrain grid
-
-    // Initialize random number generators
+    const float minDistance = 7.0f;    
+    const float terrainHalfSize = gridResolution / 2.0f;
     std::mt19937 rng(static_cast<unsigned int>(std::time(nullptr)));
-    std::uniform_real_distribution<float> distPos(-terrainHalfSize + 10.0f, terrainHalfSize - 10.0f); // Keep obstacles within terrain
-    std::uniform_real_distribution<float> distScale(10.0f, 15.0f); // Random scale for variety
+    std::uniform_real_distribution<float> distPos(-terrainHalfSize + 10.0f, terrainHalfSize - 10.0f);
+
+    // Separate scale distributions for trees and buildings
+    std::uniform_real_distribution<float> distScaleTrees(10.0f, 25.0f);      // For trees
+    std::uniform_real_distribution<float> distScaleBuildings(10.0f, 15.0f);  // For buildings
 
     std::vector<glm::vec3> placedPositions;
 
-    for(int i = 0; i < numObstacles; ++i)
+    const int numTrees = 35;
+    const int numBuildings = 8;
+
+    const int maxPlacementAttempts = 100; // Maximum attempts to place an obstacle
+
+    // 1) Generate TREES
+    for (int i = 0; i < numTrees; ++i)
     {
         bool positionOK = false;
         glm::vec3 pos;
         float scale;
+        int attempts = 0;
 
-        while(!positionOK)
+        while (!positionOK && attempts < maxPlacementAttempts)
         {
             pos = glm::vec3(distPos(rng), 0.0f, distPos(rng));
-            scale = distScale(rng);
+            scale = distScaleTrees(rng);
 
+            // Ensure no overlap with existing obstacles
             positionOK = true;
-            for(const auto& existingPos : placedPositions)
+            for (const auto& existingPos : placedPositions)
             {
-                if(CalculateDistance(pos, existingPos) < minDistance)
+                if (CalculateDistance(pos, existingPos) < minDistance)
                 {
                     positionOK = false;
                     break;
                 }
             }
+
+            attempts++;
         }
 
-        placedPositions.emplace_back(pos);
+        if (positionOK)
+        {
+            placedPositions.emplace_back(pos);
+            Obstacle* tree = new Obstacle(meshes, shaders, shaders["ObstacleShader"], pos, scale);
+            obstacles.push_back(tree);
+        }
+        else
+        {
+            std::cerr << "Failed to place tree " << i + 1 << " after " << maxPlacementAttempts << " attempts.\n";
+        }
+    }
 
-        // Create and store the obstacle
-        Obstacle* obstacle = new Obstacle(meshes, shaders, shaders["ObstacleShader"], pos, scale);
-        obstacles.push_back(obstacle);
+    // 2) Generate BUILDINGS
+    for (int i = 0; i < numBuildings; ++i)
+    {
+        bool positionOK = false;
+        glm::vec3 pos;
+        float scale;
+        int attempts = 0;
+
+        while (!positionOK && attempts < maxPlacementAttempts)
+        {
+            pos = glm::vec3(distPos(rng), 0.0f, distPos(rng));
+            scale = distScaleBuildings(rng);
+
+            // Ensure no overlap with existing obstacles
+            positionOK = true;
+            for (const auto& existingPos : placedPositions)
+            {
+                if (CalculateDistance(pos, existingPos) < minDistance)
+                {
+                    positionOK = false;
+                    break;
+                }
+            }
+
+            attempts++;
+        }
+
+        if (positionOK)
+        {
+            placedPositions.emplace_back(pos);
+            Building* building = new Building(meshes, shaders, shaders["ObstacleShader"], pos, scale);
+            obstacles.push_back(building);
+        }
+        else
+        {
+            std::cerr << "Failed to place building " << i + 1 << " after " << maxPlacementAttempts << " attempts.\n";
+        }
     }
 }
+
 
 
 void Tema2::FrameStart()
@@ -205,7 +271,7 @@ void Tema2::OnInputUpdate(float deltaTime, int mods)
     // move the camera only if MOUSE_RIGHT button is pressed
     if (window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
     {
-        float cameraSpeed = 2.0f;
+        float cameraSpeed = 6.0f;
 
         if (window->KeyHold(GLFW_KEY_W)) {
             camera->TranslateForward(cameraSpeed * deltaTime);

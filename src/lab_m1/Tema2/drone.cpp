@@ -66,12 +66,12 @@ namespace m1
             // Render the horizontal and vertical bodies
             glm::mat4 bodyMatrix = glm::scale(modelMatrix, glm::vec3(3.0f, 0.25f, 0.15f));
             glUniform3f(glGetUniformLocation(shader->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
-            parent->RenderMesh(meshes["box"], shader, bodyMatrix);
+            parent->RenderMesh(meshes["cube"], shader, bodyMatrix);
 
             glm::mat4 verticalBodyMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(0, 1, 0));
             verticalBodyMatrix = glm::scale(verticalBodyMatrix, glm::vec3(3.0f, 0.25f, 0.15f));
             glUniform3f(glGetUniformLocation(shader->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
-            parent->RenderMesh(meshes["box"], shader, verticalBodyMatrix);
+            parent->RenderMesh(meshes["cube"], shader, verticalBodyMatrix);
 
             // Render small cubes at the ends
             std::vector<glm::vec3> smallCubePositions = {
@@ -86,7 +86,7 @@ namespace m1
                 glm::mat4 smallCube = glm::translate(modelMatrix, pos);
                 smallCube = glm::scale(smallCube, glm::vec3(0.3f, 0.3f, 0.3f));
                 glUniform3f(glGetUniformLocation(shader->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
-                parent->RenderMesh(meshes["box"], shader, smallCube);
+                parent->RenderMesh(meshes["cube"], shader, smallCube);
             }
 
             // Render pillars above each small cube
@@ -95,7 +95,7 @@ namespace m1
                 glm::mat4 pillar = glm::translate(modelMatrix, pos + glm::vec3(0, 0.3f, 0));
                 pillar = glm::scale(pillar, glm::vec3(0.1f, 0.3f, 0.1f));
                 glUniform3f(glGetUniformLocation(shader->GetProgramID(), "object_color"), 0.5f, 0.5f, 0.5f); // Grey color
-                parent->RenderMesh(meshes["box"], shader, pillar);
+                parent->RenderMesh(meshes["cube"], shader, pillar);
             }
         }
     }
@@ -118,7 +118,7 @@ namespace m1
                 propeller = glm::rotate(propeller, glm::radians(rotorAngle), glm::vec3(0, 1, 0)); // Rotate propellers
                 propeller = glm::scale(propeller, glm::vec3(0.6f, 0.05f, 0.1f));
                 glUniform3f(glGetUniformLocation(shader->GetProgramID(), "object_color"), 0.0f, 0.0f, 0.0f); // Black color
-                parent->RenderMesh(meshes["box"], shader, propeller);
+                parent->RenderMesh(meshes["cube"], shader, propeller);
             }
         }
     }
@@ -135,17 +135,17 @@ namespace m1
             // Ox (Red)
             glm::mat4 oxMatrix = glm::scale(axisMatrix * glm::translate(glm::mat4(1), glm::vec3(1.0f, 0, 0)), glm::vec3(1.0f, 0.05f, 0.05f));
             glUniform3f(glGetUniformLocation(shader->GetProgramID(), "object_color"), 1.0f, 0.0f, 0.0f); // Red
-            parent->RenderMesh(meshes["box"], shader, oxMatrix);
+            parent->RenderMesh(meshes["cube"], shader, oxMatrix);
 
             // Oy (Green)
             glm::mat4 oyMatrix = glm::scale(axisMatrix * glm::translate(glm::mat4(1), glm::vec3(0, 1.0f, 0)), glm::vec3(0.05f, 1.0f, 0.05f));
             glUniform3f(glGetUniformLocation(shader->GetProgramID(), "object_color"), 0.0f, 1.0f, 0.0f); // Green
-            parent->RenderMesh(meshes["box"], shader, oyMatrix);
+            parent->RenderMesh(meshes["cube"], shader, oyMatrix);
 
             // Oz (Blue)
             glm::mat4 ozMatrix = glm::scale(axisMatrix * glm::translate(glm::mat4(1), glm::vec3(0, 0, 1.0f)), glm::vec3(0.05f, 0.05f, 1.0f));
             glUniform3f(glGetUniformLocation(shader->GetProgramID(), "object_color"), 0.0f, 0.0f, 1.0f); // Blue
-            parent->RenderMesh(meshes["box"], shader, ozMatrix);
+            parent->RenderMesh(meshes["cube"], shader, ozMatrix);
         }
     }
 

@@ -43,7 +43,6 @@ void main() {
 
     // Calculate noise based on X and Z positions
     float n = noise(position.xz * frequency);
-    // noiseValue = n; // Pass noise value to fragment shader
 
     // Apply a bias to shift noise values towards higher range
     float bias = 0.2; // Adjust this value as needed (0.0 to 1.0)

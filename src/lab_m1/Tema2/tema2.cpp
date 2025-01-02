@@ -162,7 +162,7 @@ void Tema2::Init()
 
     const int maxPlacementAttempts = 100; // Maximum attempts to place an obstacle
 
-        // Generate Trees
+    // Generate Trees
     GenerateTrees(numTrees,
                   minDistance,
                   terrainHalfSize,
@@ -435,7 +435,7 @@ void Tema2::GenerateTrees(int numTrees,
         if (positionOK)
         {
             placedPositions.emplace_back(pos);
-            Obstacle* tree = new Obstacle(meshes, shaders, shaders["ObstacleShader"], pos, scale);
+            Tree* tree = new Tree(meshes, shaders, shaders["ObstacleShader"], pos, scale);
             obstacles.push_back(tree);
         }
         else

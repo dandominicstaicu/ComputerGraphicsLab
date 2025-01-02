@@ -6,6 +6,8 @@
 #include "lab_m1/Tema2/terrain.h"
 #include "lab_m1/Tema2/obstacle.h"
 #include "lab_m1/Tema2/building.h"
+#include "lab_m1/Tema2/tree.h"
+
 
 #include <random>
 #include <ctime>

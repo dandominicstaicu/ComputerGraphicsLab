@@ -38,4 +38,88 @@ namespace m1
     Tree::~Tree()
     {
     }
+
+    bool Tree::CheckCollisionWithSphere(const glm::vec3& sphereCenter, float sphereRadius)
+    {
+        // 1) TRUNK bounding box
+        float trunkHalfX = (scale * 0.2f) * 0.07f;   // x half-extent
+        float trunkHalfZ = (scale * 0.2f) * 0.07;   // z half-extent
+        float trunkHeight = (scale * 0.38f) * 0.25f;        // total height
+        // We place the trunk so that position.y is the bottom, then top is position.y + trunkHeight:
+        glm::vec3 trunkMin = glm::vec3(
+            position.x - trunkHalfX,
+            position.y,
+            position.z - trunkHalfZ
+        );
+        glm::vec3 trunkMax = glm::vec3(
+            position.x + trunkHalfX,
+            position.y + trunkHeight, 
+            position.z + trunkHalfZ
+        );
+
+        // 2) FOLIAGE bounding box 
+        float foliageHalf = scale * 0.5f;  // rough half-extent in X, Z
+        float foliageHeight = scale;       // total height in Y
+        float foliageOffset = scale * 0.09f;
+
+        glm::vec3 foliageMin = glm::vec3(
+            position.x - foliageHalf,
+            position.y + foliageOffset,  // offset upward
+            position.z - foliageHalf
+        );
+        glm::vec3 foliageMax = glm::vec3(
+            position.x + foliageHalf,
+            position.y + foliageOffset + foliageHeight,
+            position.z + foliageHalf
+        );
+
+        // Now we check collision with trunk box AND foliage box
+        bool collTrunk = CheckSphereAABB(sphereCenter, sphereRadius, trunkMin, trunkMax);
+        bool collFoliage = CheckSphereAABB(sphereCenter, sphereRadius, foliageMin, foliageMax);
+
+        return (collTrunk || collFoliage);
+    }
+
+    std::vector<std::pair<glm::vec3, glm::vec3>> Tree::GetAABBs() const
+    {
+        std::vector<std::pair<glm::vec3, glm::vec3>> aabbs;
+
+        // TRUNK bounding box
+        float trunkHalfX = (scale * 0.2f) * 0.07f;   // x half-extent
+        float trunkHalfZ = (scale * 0.2f) * 0.07f;   // z half-extent
+        float trunkHeight = (scale * 0.38f) * 0.25f; // total height
+
+        glm::vec3 trunkMin = glm::vec3(
+            position.x - trunkHalfX,
+            position.y,
+            position.z - trunkHalfZ
+        );
+        glm::vec3 trunkMax = glm::vec3(
+            position.x + trunkHalfX,
+            position.y + trunkHeight,
+            position.z + trunkHalfZ
+        );
+
+        aabbs.emplace_back(trunkMin, trunkMax);
+
+        // FOLIAGE bounding box
+        float foliageHalf = scale * 0.05f;  // half-extent in X, Z
+        float foliageHeight = scale * 0.115;       // height in Y
+        float foliageOffset = scale * 0.09f;
+
+        glm::vec3 foliageMin = glm::vec3(
+            position.x - foliageHalf,
+            position.y + foliageOffset,
+            position.z - foliageHalf
+        );
+        glm::vec3 foliageMax = glm::vec3(
+            position.x + foliageHalf,
+            position.y + foliageOffset + foliageHeight,
+            position.z + foliageHalf
+        );
+
+        aabbs.emplace_back(foliageMin, foliageMax);
+
+        return aabbs;
+    }
 }

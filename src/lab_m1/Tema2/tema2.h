@@ -7,6 +7,7 @@
 #include "lab_m1/Tema2/obstacle.h"
 #include "lab_m1/Tema2/building.h"
 #include "lab_m1/Tema2/tree.h"
+#include "lab_m1/Tema2/utils.h"
 
 
 #include <random>
@@ -67,9 +68,16 @@ namespace m1
          Terrain terrain;
          std::vector<Obstacle*> obstacles; // Vector to store obstacles
 
+         void RenderAABBs();
+         void RenderDroneHitbox();
+
      protected:
         implemented::CameraT2 *camera;
         glm::mat4 projectionMatrix;
+   
+        // NEW: Mesh for AABB (unit cube)
+         Mesh* aabbMesh = nullptr;
+
 
    public:
       void RenderMesh(Mesh *mesh, Shader *shader, const glm::mat4 &modelMatrix) override;

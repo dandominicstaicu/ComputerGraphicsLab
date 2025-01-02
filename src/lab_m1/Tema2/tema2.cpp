@@ -80,10 +80,20 @@ void Tema2::Init()
         meshes[cube->GetMeshID()] = cube;
     }
 
+    // todo remove
+    aabbMesh = meshes["cube"];
+
     // Load Box Mesh for Buildings
     {
         Mesh* mesh = new Mesh("box");
         mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "box.obj");
+        meshes[mesh->GetMeshID()] = mesh;
+    }
+
+    // Load Sphere Mesh for Drone hitbox
+    {
+        Mesh* mesh = new Mesh("sphere");
+        mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "sphere.obj");
         meshes[mesh->GetMeshID()] = mesh;
     }
 
@@ -135,6 +145,17 @@ void Tema2::Init()
         shaders[obstacleShader->GetName()] = obstacleShader;
     }
 
+    { // todo remove after
+        Shader* aabbShader = new Shader("AABBShader");
+        aabbShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "AABBVertexShader.glsl"), GL_VERTEX_SHADER);
+        aabbShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "AABBFragmentShader.glsl"), GL_FRAGMENT_SHADER);
+        if (!aabbShader->CreateAndLink())
+        {
+            std::cerr << "Failed to create and link AABBShader.\n";
+        }
+        shaders[aabbShader->GetName()] = aabbShader;
+    }
+
     int gridResolution = 86;
 
     // Initialize the Drone class
@@ -157,8 +178,8 @@ void Tema2::Init()
 
     std::vector<glm::vec3> placedPositions;
 
-    const int numTrees = 35;
-    const int numBuildings = 8;
+    const int numTrees = 30;
+    const int numBuildings = 10;
 
     const int maxPlacementAttempts = 100; // Maximum attempts to place an obstacle
 
@@ -200,6 +221,8 @@ void Tema2::FrameStart()
 
 void Tema2::Update(float deltaTimeSeconds)
 {
+    glm::vec3 oldDronePos = drone.GetPosition();
+
     // Update the drone state
     drone.Update(deltaTimeSeconds);
 
@@ -210,6 +233,24 @@ void Tema2::Update(float deltaTimeSeconds)
         // Clamp the Y position to 0 so it never goes below ground
         dronePos.y = terrainTreshold;
         drone.SetPosition(dronePos);
+    }
+
+    // Check obstacle collisions
+    float droneRadius = drone.GetCollisionRadius();
+    for (auto& obstacle : obstacles)
+    {
+        if (obstacle->CheckCollisionWithSphere(dronePos, droneRadius))
+        {
+            // Collision found! Decide how to handle it:
+            // Example: revert movement or push drone back up
+            // For demonstration, just print a message:
+            drone.SetPosition(oldDronePos);
+            std::cout << "Drone collided with an obstacle!\n";
+
+            // If you want to do something like push the drone away or revert the last movement
+            // you'd need to store the old drone position before this frame, then restore it here.
+            break; // If you only want to handle the first obstacle
+        }
     }
 
     // Render the drone
@@ -223,9 +264,52 @@ void Tema2::Update(float deltaTimeSeconds)
         obstacle->Render(camera->GetViewMatrix(), projectionMatrix);
     }
 
+    // Render AABBs
+    RenderAABBs();
 
+    // Render Drone's Hitbox
+    RenderDroneHitbox();
 }
 
+void Tema2::RenderAABBs()
+{
+    Shader* aabbShader = shaders["AABBShader"];
+    if (!aabbShader)
+        return;
+
+    aabbShader->Use();
+    glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(camera->GetViewMatrix()));
+    glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    glUniform3fv(glGetUniformLocation(aabbShader->GetProgramID(), "objectColor"), 1, glm::value_ptr(glm::vec3(1.0f, 0.0f, 0.0f))); // Red color
+
+    // Enable wireframe mode
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    for(auto& obstacle : obstacles)
+    {
+        std::vector<std::pair<glm::vec3, glm::vec3>> aabbs = obstacle->GetAABBs();
+        for(const auto& aabb : aabbs)
+        {
+            glm::vec3 boxMin = aabb.first;
+            glm::vec3 boxMax = aabb.second;
+
+            // Calculate the center and scale
+            glm::vec3 center = (boxMin + boxMax) / 2.0f;
+            glm::vec3 size = boxMax - boxMin;
+
+            // Create model matrix
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, center);
+            model = glm::scale(model, size);
+
+            // Render the AABB
+            RenderMesh(aabbMesh, aabbShader, model);
+        }
+    }
+
+    // Restore to fill mode
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
 
 void Tema2::FrameEnd()
 {
@@ -494,4 +578,35 @@ void Tema2::GenerateBuildings(int numBuildings,
         }
     }
 }
+
+void Tema2::RenderDroneHitbox()
+{
+    Shader* aabbShader = shaders["AABBShader"];
+    if (!aabbShader)
+        return;
+
+    aabbShader->Use();
+    glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(camera->GetViewMatrix()));
+    glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    glUniform3fv(glGetUniformLocation(aabbShader->GetProgramID(), "objectColor"), 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f))); // Green color for hitbox
+
+    // Enable wireframe mode
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    // Get drone's position and collision radius
+    glm::vec3 dronePos = drone.GetPosition();
+    float droneRadius = drone.GetCollisionRadius();
+
+    // Create model matrix for the collision sphere
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, dronePos);
+    model = glm::scale(model, glm::vec3(droneRadius)); // Scale to collision radius
+
+    // Render the drone's collision sphere
+    RenderMesh(meshes["sphere"], aabbShader, model);
+
+    // Restore to fill mode
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
 

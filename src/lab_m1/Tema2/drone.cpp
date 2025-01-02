@@ -8,7 +8,7 @@
 namespace m1
 {
     Drone::Drone()
-        : rotorAngle(0.0f), position(1.5f), scale(0.1f, 1.0f, 0.1f), rotationY(0.0f), shader(nullptr), parent(nullptr)
+        : rotorAngle(0.0f), position(0.0f, 6.0f, 0.0f), scale(0.1f, 1.0f, 0.1f), rotationY(0.0f), shader(nullptr), parent(nullptr)
     {
     }
 

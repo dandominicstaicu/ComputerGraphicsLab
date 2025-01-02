@@ -38,6 +38,7 @@ namespace m1
         // Getters and Setters
         glm::vec3 GetPosition() const;
         void SetPosition(const glm::vec3& position);
+        float GetCollisionRadius() const { return 3.2f; } 
 
     private:
         // Drone properties

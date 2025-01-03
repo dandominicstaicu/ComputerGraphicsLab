@@ -65,6 +65,9 @@ namespace m1
 
          Drone drone;
          Terrain terrain;
+         
+         glm::vec3 dronePrevPos;
+
          std::vector<Obstacle*> obstacles; // Vector to store obstacles
 
      protected:

@@ -230,17 +230,10 @@ void Tema2::Update(float deltaTimeSeconds)
     // Render the terrain
     RenderMesh(terrain.GetMesh(), shaders["TerrainShader"], glm::mat4(1));
 
-    // // Render all obstacles
-    // for(auto& obstacle : obstacles) {
-    //     obstacle->Render(camera->GetViewMatrix(), projectionMatrix);
-    // }
+    // **Initialize collision flag**
+    bool collisionDetected = false;
 
-    // 5. Render all obstacles and check collisions
-    //    We'll assume each obstacle has one or more bounding boxes.
-    //    For the tree, we have "trunkBox" and "foliageBox".
-    //    For the building, "buildingBox".
-
-     // 5. Render all obstacles and check collisions
+        // Iterate through all obstacles to render them and check for collisions
     for (auto& obstacle : obstacles)
     {
         // Render the obstacle
@@ -252,12 +245,12 @@ void Tema2::Update(float deltaTimeSeconds)
             // Check collision with trunk
             if (CheckCollision(drone.droneBox, tree->trunkBox)) {
                 std::cout << "Collision with tree trunk!\n";
-                // Handle collision (e.g., restrict movement, reduce health, etc.)
+                collisionDetected = true;
             }
             // Check collision with foliage
             if (CheckCollision(drone.droneBox, tree->foliageBox)) {
                 std::cout << "Collision with tree foliage!\n";
-                // Handle collision
+                collisionDetected = true;
             }
 
             // Draw hitboxes for debugging
@@ -267,7 +260,7 @@ void Tema2::Update(float deltaTimeSeconds)
         {
             if (CheckCollision(drone.droneBox, building->buildingBox)) {
                 std::cout << "Collision with building!\n";
-                // Handle collision
+                collisionDetected = true;
             }
 
             // Draw hitbox for debugging
@@ -275,6 +268,12 @@ void Tema2::Update(float deltaTimeSeconds)
         }
     }
 
+    // **Respond to collision**
+    if (collisionDetected) {
+        // Restore the drone's previous position to prevent passing through
+        drone.SetPosition(dronePrevPos);
+        std::cout << "Drone position reset to prevent passing through obstacle.\n";
+    }
 }
 
 
@@ -340,6 +339,9 @@ void Tema2::OnInputUpdate(float deltaTime, int mods)
     float rotationSpeed = 90.0f; // Degrees per second
 
     if (!window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT)) {
+        // **Save the drone's current position before applying movement**
+        dronePrevPos = drone.GetPosition();
+
         // Translate along local axes
         if (window->KeyHold(GLFW_KEY_W)) {
             // Move forward along Oz

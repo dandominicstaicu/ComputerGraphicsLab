@@ -106,6 +106,13 @@ void Tema2::Init()
         meshes[cone->GetMeshID()] = cone;
     }
 
+    // Load Ring Mesh for Checkpoints
+    {
+        Mesh* ring = new Mesh("ring");
+        ring->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "custom"), "ring.obj");
+        meshes[ring->GetMeshID()] = ring;
+    }
+
     // Load Shaders
     {
         Shader* droneShader = new Shader("DroneShader");
@@ -150,6 +157,30 @@ void Tema2::Init()
             std::cerr << "Failed to create and link AABBShader.\n";
         }
         shaders[aabbShader->GetName()] = aabbShader;
+    }
+
+    {
+        // Define positions for 6 checkpoints above the trees (y > 10)
+        std::vector<glm::vec3> checkpointPositions = {
+            glm::vec3(10.0f, 15.0f, 10.0f),
+            glm::vec3(-20.0f, 15.0f, 30.0f),
+            glm::vec3(25.0f, 15.0f, -15.0f),
+            glm::vec3(-30.0f, 15.0f, -25.0f),
+            glm::vec3(35.0f, 15.0f, 40.0f),
+            glm::vec3(-40.0f, 15.0f, 35.0f)
+        };
+
+        // Define default color (e.g., blue) and highlight color (e.g., red)
+        glm::vec3 defaultColor(0.0f, 0.0f, 1.0f); // Blue
+        glm::vec3 highlightColor(1.0f, 0.0f, 0.0f); // Red
+
+        // Create and store checkpoints
+        for (size_t i = 0; i < checkpointPositions.size(); ++i)
+        {
+            glm::vec3 color = (i == 0) ? highlightColor : defaultColor; // Highlight the first checkpoint initially
+            Checkpoint* checkpoint = new Checkpoint(checkpointPositions[i], color);
+            checkpoints.push_back(checkpoint);
+        }
     }
 
     int gridResolution = 86;
@@ -199,6 +230,9 @@ void Tema2::Init()
                       distScaleBuildings,
                       placedPositions);
 
+    // Highlight the first checkpoint
+    UpdateCheckpoint();
+
 }
 
 void Tema2::FrameStart()
@@ -230,7 +264,7 @@ void Tema2::Update(float deltaTimeSeconds)
         drone.SetPosition(dronePos);
     }
 
-    // **Update Camera Position and Orientation Based on Camera Mode**
+    // Update Camera Position and Orientation Based on Camera Mode
     if (currentCameraMode == FIRST_PERSON) {
         float eyeHeight = 0.5f; // Adjust as needed
         glm::vec3 cameraPos = drone.GetPosition() + glm::vec3(0, eyeHeight, 0);
@@ -244,6 +278,33 @@ void Tema2::Update(float deltaTimeSeconds)
         glm::vec3 cameraTarget = drone.GetPosition() + glm::vec3(0, 1.0f, 0); // Look at the drone's eye level
 
         camera->Set(cameraPos, cameraTarget, glm::vec3(0, 1, 0));
+    }
+
+    // Render Checkpoints
+    {
+        for (size_t i = 0; i < checkpoints.size(); ++i)
+        {
+            Checkpoint* checkpoint = checkpoints[i];
+
+            // Retrieve the shader used for checkpoints
+            Shader* checkpointShader = shaders["ObstacleShader"]; // Using ObstacleShader for simplicity
+
+            // Set up the model matrix
+            glm::mat4 modelMatrix = glm::mat4(1.0f);
+            modelMatrix = glm::translate(modelMatrix, checkpoint->GetPosition());
+
+            // scale the checkpoint
+            modelMatrix = glm::scale(modelMatrix, glm::vec3(7.0f));
+
+            // Set the color uniform
+            glUniform3fv(glGetUniformLocation(checkpointShader->GetProgramID(), "object_color"), 1, glm::value_ptr(checkpoint->GetColor()));
+
+            // Render the ring mesh
+            if (meshes.find("ring") != meshes.end())
+            {
+                RenderMesh(meshes["ring"], checkpointShader, modelMatrix);
+            }
+        }
     }
 
     // Render the drone
@@ -296,6 +357,8 @@ void Tema2::Update(float deltaTimeSeconds)
         drone.SetPosition(dronePrevPos);
         std::cout << "Drone position reset to prevent passing through obstacle.\n";
     }
+
+ 
 }
 
 
@@ -572,4 +635,21 @@ void Tema2::GenerateBuildings(int numBuildings,
                       << " after " << maxPlacementAttempts << " attempts.\n";
         }
     }
+
+    
 }
+
+    void Tema2::UpdateCheckpoint()
+    {
+        // Reset all checkpoints to default color
+        glm::vec3 defaultColor(0.0f, 0.0f, 1.0f); // Blue
+        glm::vec3 highlightColor(1.0f, 0.0f, 0.0f); // Red
+    
+        for (size_t i = 0; i < checkpoints.size(); ++i)
+        {
+            if (i == currentCheckpointIndex)
+                checkpoints[i]->SetColor(highlightColor);
+            else
+                checkpoints[i]->SetColor(defaultColor);
+        }
+    }

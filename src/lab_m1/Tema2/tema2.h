@@ -7,6 +7,7 @@
 #include "lab_m1/Tema2/obstacle.h"
 #include "lab_m1/Tema2/building.h"
 #include "lab_m1/Tema2/tree.h"
+#include "lab_m1/Tema2/checkpoint.h"
 
 
 #include <random>
@@ -70,6 +71,10 @@ namespace m1
 
          std::vector<Obstacle*> obstacles; // Vector to store obstacles
 
+         std::vector<Checkpoint*> checkpoints;
+
+         size_t currentCheckpointIndex = 0; 
+
       // **Camera Mode Enumeration**
         enum CameraMode { FIRST_PERSON, THIRD_PERSON };
         CameraMode currentCameraMode = FIRST_PERSON; // Default mode
@@ -84,6 +89,7 @@ namespace m1
 
    public:
       void RenderMesh(Mesh *mesh, Shader *shader, const glm::mat4 &modelMatrix) override;
+      void UpdateCheckpoint();
 
     };
 }   // namespace m1

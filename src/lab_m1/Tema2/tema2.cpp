@@ -48,6 +48,28 @@ static Mesh* CreateCube(const std::string& name)
     return cube;
 }
 
+static Mesh* CreateArrow(const std::string& name)
+{
+    // Define a simple 2D arrow using triangles
+    std::vector<VertexFormat> vertices =
+    {
+        // Position            // Normal      // Texture (optional)
+        VertexFormat(glm::vec3(0.0f,  0.1f, 0.0f), glm::vec3(0, 0, 1)),  // Tip
+        VertexFormat(glm::vec3(-0.05f, -0.05f, 0.0f), glm::vec3(0, 0, 1)), // Left base
+        VertexFormat(glm::vec3(0.05f, -0.05f, 0.0f), glm::vec3(0, 0, 1))  // Right base
+    };
+
+    std::vector<unsigned int> indices =
+    {
+        0, 1, 2
+    };
+
+    Mesh* arrow = new Mesh(name);
+    arrow->InitFromData(vertices, indices);
+    return arrow;
+}
+
+
 Tema2::Tema2()
 {
 }
@@ -83,6 +105,12 @@ void Tema2::Init()
     {
         Mesh* cube = CreateCube("cube");
         meshes[cube->GetMeshID()] = cube;
+    }
+
+    // Create arrow mesh
+    {
+        Mesh* arrow = CreateArrow("arrow");
+        meshes[arrow->GetMeshID()] = arrow;
     }
 
     // Load Box Mesh for Buildings
@@ -157,6 +185,34 @@ void Tema2::Init()
             std::cerr << "Failed to create and link AABBShader.\n";
         }
         shaders[aabbShader->GetName()] = aabbShader;
+    }
+
+    {
+        Shader* uiShader = new Shader("UIShader");
+        uiShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "UIVertexShader.glsl"), GL_VERTEX_SHADER);
+        uiShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "UIFragmentShader.glsl"), GL_FRAGMENT_SHADER);
+        if (!uiShader->CreateAndLink())
+        {
+            std::cerr << "Failed to create and link UIShader.\n";
+        }
+        shaders[uiShader->GetName()] = uiShader;
+    }
+
+    // Set up orthographic projection for UI
+    {
+        float orthoLeft = 0.0f;
+        float orthoRight = static_cast<float>(window->GetResolution().x);
+        float orthoBottom = 0.0f;
+        float orthoTop = static_cast<float>(window->GetResolution().y);
+        float orthoNear = -1.0f;
+        float orthoFar = 1.0f;
+
+        glm::mat4 uiProjection = glm::ortho(orthoLeft, orthoRight, orthoBottom, orthoTop, orthoNear, orthoFar);
+
+        // Use UIShader and set projection matrix
+        Shader* uiShader = shaders["UIShader"];
+        uiShader->Use();
+        glUniformMatrix4fv(glGetUniformLocation(uiShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(uiProjection));
     }
 
     {
@@ -376,6 +432,57 @@ void Tema2::Update(float deltaTimeSeconds)
         // Restore the drone's previous position to prevent passing through
         drone.SetPosition(dronePrevPos);
         std::cout << "Drone position reset to prevent passing through obstacle.\n";
+    }
+
+    // Render Indicator Arrow
+    if (currentCheckpointIndex < checkpoints.size())
+    {
+        Checkpoint* nextCheckpoint = checkpoints[currentCheckpointIndex];
+        glm::vec3 checkpointPos = nextCheckpoint->GetPosition();
+
+        glm::vec3 cameraPos = drone.GetPosition(); // Assuming drone's position represents the camera
+        glm::vec3 cameraForward = drone.GetForwardVector(); // Drone's forward direction
+
+        // Compute vector from camera to checkpoint in XZ plane
+        glm::vec3 toCheckpoint = checkpointPos - cameraPos;
+        glm::vec2 toCheckpointXZ = glm::normalize(glm::vec2(toCheckpoint.x, toCheckpoint.z));
+
+        glm::vec2 cameraForwardXZ = glm::normalize(glm::vec2(cameraForward.x, cameraForward.z));
+
+        // Compute angle between camera forward and toCheckpoint vectors
+        float angleRad = atan2(toCheckpointXZ.y, toCheckpointXZ.x) - atan2(cameraForwardXZ.y, cameraForwardXZ.x);
+        float angleDeg = glm::degrees(angleRad);
+
+        // Normalize angle to [0, 360)
+        if (angleDeg < 0)
+            angleDeg += 360.0f;
+
+        // Position the arrow at a fixed screen position, e.g., bottom center
+        float arrowSize = 500.0f; // Adjust size as needed
+        glm::vec3 arrowPos = glm::vec3(window->GetResolution().x / 2.0f, 50.0f, 0.0f); // 50 pixels from bottom
+
+        // Create model matrix for the arrow
+        glm::mat4 arrowModel = glm::mat4(1.0f);
+        arrowModel = glm::translate(arrowModel, arrowPos);
+        arrowModel = glm::rotate(arrowModel, glm::radians(angleDeg), glm::vec3(0, 0, 1));
+        arrowModel = glm::scale(arrowModel, glm::vec3(arrowSize, arrowSize, 1.0f));
+
+        // Use UIShader
+        Shader* uiShader = shaders["UIShader"];
+        uiShader->Use();
+
+        // Set color
+        glm::vec3 arrowColor(1.0f, 1.0f, 0.0f); // Yellow
+        glUniform3fv(glGetUniformLocation(uiShader->GetProgramID(), "objectColor"), 1, glm::value_ptr(arrowColor));
+
+        // Set model matrix
+        glUniformMatrix4fv(glGetUniformLocation(uiShader->GetProgramID(), "model"), 1, GL_FALSE, glm::value_ptr(arrowModel));
+
+        // Render the arrow
+        if (meshes.find("arrow") != meshes.end())
+        {
+            meshes["arrow"]->Render();
+        }
     }
 
  

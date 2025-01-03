@@ -8,7 +8,7 @@
 namespace m1
 {
     Drone::Drone()
-        : rotorAngle(0.0f), position(1.5f), scale(0.1f, 1.0f, 0.1f), rotationY(0.0f), shader(nullptr), parent(nullptr)
+        : rotorAngle(0.0f), position(0.0f, 6.0f, 0.0f), scale(0.1f, 1.0f, 0.1f), rotationY(0.0f), shader(nullptr), parent(nullptr)
     {
     }
 
@@ -35,7 +35,7 @@ namespace m1
     void Drone::Update(float deltaTimeSeconds)
     {
         // Update rotor angle for animation
-        rotorAngle += deltaTimeSeconds * 360.0f; // Adjust speed if needed
+        rotorAngle += deltaTimeSeconds * 360.0f;
         if (rotorAngle >= 360.0f)
             rotorAngle -= 360.0f;
     }
@@ -244,5 +244,10 @@ namespace m1
 
         // Restore to fill mode
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    glm::vec3 Drone::GetForwardVector() const
+    {
+        return glm::normalize(glm::vec3(-sin(glm::radians(rotationY)), 0, -cos(glm::radians(rotationY))));
     }
 }

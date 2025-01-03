@@ -40,6 +40,9 @@ namespace m1
         glm::vec3 GetPosition() const;
         void SetPosition(const glm::vec3& position);
 
+        // Get the forward direction of the drone
+        glm::vec3 GetForwardVector() const;
+
         // The bounding box that we'll check for collisions
         Hitbox droneBox;
 

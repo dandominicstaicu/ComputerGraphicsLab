@@ -169,8 +169,8 @@ void Tema2::Init()
 
     std::vector<glm::vec3> placedPositions;
 
-    const int numTrees = 0;
-    const int numBuildings = 1;
+    const int numTrees = 35;
+    const int numBuildings = 8;
 
     const int maxPlacementAttempts = 100; // Maximum attempts to place an obstacle
 
@@ -193,6 +193,17 @@ void Tema2::Init()
                       distPos,
                       distScaleBuildings,
                       placedPositions);
+
+    // **Initialize Camera Position and Orientation Based on Drone**
+    // Define eye height relative to the drone's position
+    float eyeHeight = 0.5f; // Adjust as needed for better first-person view
+
+    // Calculate initial camera position
+    glm::vec3 initialCameraPos = drone.GetPosition() + glm::vec3(0, eyeHeight, 0);
+    glm::vec3 initialCameraTarget = initialCameraPos + drone.GetForwardVector();
+
+    // Set the camera to the drone's position and orientation
+    camera->Set(initialCameraPos, initialCameraTarget, glm::vec3(0, 1, 0));
 }
 
 void Tema2::FrameStart()
@@ -224,16 +235,22 @@ void Tema2::Update(float deltaTimeSeconds)
         drone.SetPosition(dronePos);
     }
 
+    // **Update Camera Position and Orientation Based on Drone**
+    float eyeHeight = 0.5f; // Adjust as needed
+    glm::vec3 cameraPos = drone.GetPosition() + glm::vec3(0, eyeHeight, 0);
+    glm::vec3 cameraTarget = cameraPos + drone.GetForwardVector();
+    camera->Set(cameraPos, cameraTarget, glm::vec3(0, 1, 0));
+
     // Render the drone
     drone.Render(camera->GetViewMatrix(), projectionMatrix);
 
     // Render the terrain
     RenderMesh(terrain.GetMesh(), shaders["TerrainShader"], glm::mat4(1));
 
-    // **Initialize collision flag**
+    // Initialize collision flag
     bool collisionDetected = false;
 
-        // Iterate through all obstacles to render them and check for collisions
+    // Iterate through all obstacles to render them and check for collisions
     for (auto& obstacle : obstacles)
     {
         // Render the obstacle
@@ -268,7 +285,7 @@ void Tema2::Update(float deltaTimeSeconds)
         }
     }
 
-    // **Respond to collision**
+    // Respond to collision
     if (collisionDetected) {
         // Restore the drone's previous position to prevent passing through
         drone.SetPosition(dronePrevPos);
@@ -293,7 +310,6 @@ void Tema2::RenderMesh(Mesh * mesh, Shader * shader, const glm::mat4 & modelMatr
     glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(camera->GetViewMatrix()));
     glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-
     mesh->Render();
 }
 
@@ -305,37 +321,7 @@ void Tema2::RenderMesh(Mesh * mesh, Shader * shader, const glm::mat4 & modelMatr
 
 void Tema2::OnInputUpdate(float deltaTime, int mods)
 {
-    // move the camera only if MOUSE_RIGHT button is pressed
-    if (window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
-    {
-        float cameraSpeed = 6.0f;
-
-        if (window->KeyHold(GLFW_KEY_W)) {
-            camera->TranslateForward(cameraSpeed * deltaTime);
-        }
-
-        if (window->KeyHold(GLFW_KEY_A)) {
-            camera->TranslateRight(-cameraSpeed * deltaTime);
-        }
-
-        if (window->KeyHold(GLFW_KEY_S)) {
-            camera->TranslateForward(-cameraSpeed * deltaTime);
-        }
-
-        if (window->KeyHold(GLFW_KEY_D)) {
-            camera->TranslateRight(cameraSpeed * deltaTime);
-        }
-
-        if (window->KeyHold(GLFW_KEY_Q)) {
-            camera->TranslateUpward(cameraSpeed * deltaTime);
-        }
-
-        if (window->KeyHold(GLFW_KEY_E)) {
-            camera->TranslateUpward(-cameraSpeed * deltaTime);
-        }
-    }
-
-    float droneSpeed = 2.0f;
+    float droneSpeed = 6.0f;
     float rotationSpeed = 90.0f; // Degrees per second
 
     if (!window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT)) {
@@ -407,19 +393,18 @@ void Tema2::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
 {
     // Add mouse move event
 
+    // **Rotate the drone based on mouse movement for looking around**
     if (window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
     {
-        float sensivityOX = 0.001f;
-        float sensivityOY = 0.001f;
+        float sensivityOX = 0.1f; // Adjust sensitivity as needed
+        float sensivityOY = 0.1f;
 
-        if (window->GetSpecialKeyState() == 0) {
-            camera->RotateFirstPerson_OX(-sensivityOX * deltaY);
-            camera->RotateFirstPerson_OY(-sensivityOY * deltaX);
-        }
+        // Rotate the drone's yaw (rotationY) based on horizontal mouse movement
+        float yawChange = -sensivityOY * deltaX;
+        drone.RotateRight(yawChange);
 
-        if (window->GetSpecialKeyState() & GLFW_MOD_CONTROL) {
-
-        }
+        // Optionally, implement pitch rotation by adjusting the camera's up vector or the drone's orientation.
+        // This example only rotates yaw for simplicity.
     }
 }
 

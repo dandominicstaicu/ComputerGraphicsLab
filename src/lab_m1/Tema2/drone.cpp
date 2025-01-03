@@ -19,7 +19,7 @@ namespace m1
     void Drone::Init(std::unordered_map<std::string, Mesh*>& meshesMap,
                      std::unordered_map<std::string, Shader*>& shadersMap,
                      Shader* droneShader,
-                     Tema2* parentInstance) // Receive parent pointer
+                     Tema2* parentInstance)
     {
         // Initialize meshes and shaders
         meshes = meshesMap;
@@ -52,7 +52,11 @@ namespace m1
         glm::mat4 modelMatrix = glm::mat4(1.0f);
         modelMatrix = glm::translate(modelMatrix, position);
         modelMatrix = glm::rotate(modelMatrix, glm::radians(rotationY), glm::vec3(0, 1, 0));
-        // modelMatrix = glm::scale(modelMatrix, someDroneScale);
+        
+        // **Apply Additional 45-Degree Rotation Around Y-Axis**
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(45.0f), glm::vec3(0, 1, 0));
+    
+        // modelMatrix = glm::scale(modelMatrix, droneScale);
 
         // Update bounding box to world space:
         droneBox.Update(modelMatrix);

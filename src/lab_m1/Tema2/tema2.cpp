@@ -287,22 +287,39 @@ void Tema2::Update(float deltaTimeSeconds)
             Checkpoint* checkpoint = checkpoints[i];
 
             // Retrieve the shader used for checkpoints
-            Shader* checkpointShader = shaders["ObstacleShader"]; // Using ObstacleShader for simplicity
+            Shader* checkpointShader = shaders["ObstacleShader"]; // Using ObstacleShader for rendering
 
             // Set up the model matrix
             glm::mat4 modelMatrix = glm::mat4(1.0f);
             modelMatrix = glm::translate(modelMatrix, checkpoint->GetPosition());
 
-            // scale the checkpoint
+            // Scale the checkpoint
             modelMatrix = glm::scale(modelMatrix, glm::vec3(7.0f));
 
+            // **Update Hitbox based on the model matrix**
+            checkpoint->GetHitbox().Update(modelMatrix);
+
             // Set the color uniform
-            glUniform3fv(glGetUniformLocation(checkpointShader->GetProgramID(), "object_color"), 1, glm::value_ptr(checkpoint->GetColor()));
+            checkpointShader->Use(); // Activate the shader before setting uniforms
+            GLint colorLocation = glGetUniformLocation(checkpointShader->GetProgramID(), "objectColor");
+            if(colorLocation == -1) {
+                std::cerr << "Uniform 'objectColor' not found in ObstacleShader!\n";
+            }
+            else {
+                glUniform3fv(colorLocation, 1, glm::value_ptr(checkpoint->GetColor()));
+            }
 
             // Render the ring mesh
             if (meshes.find("ring") != meshes.end())
             {
                 RenderMesh(meshes["ring"], checkpointShader, modelMatrix);
+            }
+
+            // **Render Hitbox for Debugging**
+            Shader* aabbShader = shaders["AABBShader"];
+            if (aabbShader && aabbShader->program && meshes.find("cube") != meshes.end())
+            {
+                checkpoint->DrawHitbox(camera->GetViewMatrix(), projectionMatrix, meshes, aabbShader);
             }
         }
     }
@@ -350,6 +367,9 @@ void Tema2::Update(float deltaTimeSeconds)
             building->DrawHitbox(camera->GetViewMatrix(), projectionMatrix);
         }
     }
+
+    // **Check Collision with Checkpoints**
+    CheckCheckpointCollisions();
 
     // Respond to collision
     if (collisionDetected) {
@@ -639,17 +659,41 @@ void Tema2::GenerateBuildings(int numBuildings,
     
 }
 
-    void Tema2::UpdateCheckpoint()
+void Tema2::UpdateCheckpoint()
+{
+    // Reset all checkpoints to default color
+    glm::vec3 defaultColor(0.0f, 0.0f, 1.0f); // Blue
+    glm::vec3 highlightColor(1.0f, 0.0f, 0.0f); // Red
+
+    for (size_t i = 0; i < checkpoints.size(); ++i)
     {
-        // Reset all checkpoints to default color
-        glm::vec3 defaultColor(0.0f, 0.0f, 1.0f); // Blue
-        glm::vec3 highlightColor(1.0f, 0.0f, 0.0f); // Red
-    
-        for (size_t i = 0; i < checkpoints.size(); ++i)
-        {
-            if (i == currentCheckpointIndex)
-                checkpoints[i]->SetColor(highlightColor);
-            else
-                checkpoints[i]->SetColor(defaultColor);
-        }
+        if (i == currentCheckpointIndex)
+            checkpoints[i]->SetColor(highlightColor);
+        else
+            checkpoints[i]->SetColor(defaultColor);
     }
+}
+
+void Tema2::CheckCheckpointCollisions()
+{
+    if (currentCheckpointIndex >= checkpoints.size())
+        return; // All checkpoints have been passed
+
+    Checkpoint* currentCheckpoint = checkpoints[currentCheckpointIndex];
+    Hitbox& checkpointHitbox = currentCheckpoint->GetHitbox();
+
+    if (CheckCollision(drone.droneBox, checkpointHitbox))
+    {
+        std::cout << "Checkpoint " << currentCheckpointIndex + 1 << " reached!\n";
+        // Increment the checkpoint index
+        currentCheckpointIndex++;
+        if (currentCheckpointIndex >= checkpoints.size())
+        {
+            std::cout << "All checkpoints passed!\n";
+            // Optionally, handle game completion
+            currentCheckpointIndex = 0; // Example: Loop back to first checkpoint
+        }
+        // Update checkpoint colors
+        UpdateCheckpoint();
+    }
+}

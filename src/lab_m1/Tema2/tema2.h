@@ -90,6 +90,7 @@ namespace m1
    public:
       void RenderMesh(Mesh *mesh, Shader *shader, const glm::mat4 &modelMatrix) override;
       void UpdateCheckpoint();
+      void CheckCheckpointCollisions();
 
     };
 }   // namespace m1

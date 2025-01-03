@@ -70,7 +70,12 @@ Tema2::~Tema2()
 void Tema2::Init()
 {
     camera = new implemented::CameraT2();
-    camera->Set(glm::vec3(0, 2, 3.5f), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0));
+    // **Initial Camera Setup Based on Default Mode (First-Person)**
+    float eyeHeight = 0.5f; // Adjust as needed
+    glm::vec3 initialCameraPos = drone.GetPosition() + glm::vec3(0, eyeHeight, 0);
+    glm::vec3 initialCameraTarget = initialCameraPos + drone.GetForwardVector();
+    camera->Set(initialCameraPos, initialCameraTarget, glm::vec3(0, 1, 0));
+
 
     projectionMatrix = glm::perspective(RADIANS(60), window->props.aspectRatio, Z_NEAR, Z_FAR);
 
@@ -194,16 +199,6 @@ void Tema2::Init()
                       distScaleBuildings,
                       placedPositions);
 
-    // **Initialize Camera Position and Orientation Based on Drone**
-    // Define eye height relative to the drone's position
-    float eyeHeight = 0.5f; // Adjust as needed for better first-person view
-
-    // Calculate initial camera position
-    glm::vec3 initialCameraPos = drone.GetPosition() + glm::vec3(0, eyeHeight, 0);
-    glm::vec3 initialCameraTarget = initialCameraPos + drone.GetForwardVector();
-
-    // Set the camera to the drone's position and orientation
-    camera->Set(initialCameraPos, initialCameraTarget, glm::vec3(0, 1, 0));
 }
 
 void Tema2::FrameStart()
@@ -235,11 +230,21 @@ void Tema2::Update(float deltaTimeSeconds)
         drone.SetPosition(dronePos);
     }
 
-    // **Update Camera Position and Orientation Based on Drone**
-    float eyeHeight = 0.5f; // Adjust as needed
-    glm::vec3 cameraPos = drone.GetPosition() + glm::vec3(0, eyeHeight, 0);
-    glm::vec3 cameraTarget = cameraPos + drone.GetForwardVector();
-    camera->Set(cameraPos, cameraTarget, glm::vec3(0, 1, 0));
+    // **Update Camera Position and Orientation Based on Camera Mode**
+    if (currentCameraMode == FIRST_PERSON) {
+        float eyeHeight = 0.5f; // Adjust as needed
+        glm::vec3 cameraPos = drone.GetPosition() + glm::vec3(0, eyeHeight, 0);
+        glm::vec3 cameraTarget = cameraPos + drone.GetForwardVector();
+        camera->Set(cameraPos, cameraTarget, glm::vec3(0, 1, 0));
+    }
+    else if (currentCameraMode == THIRD_PERSON) {
+        // Calculate camera position behind and above the drone
+        glm::vec3 forward = drone.GetForwardVector();
+        glm::vec3 cameraPos = drone.GetPosition() - forward * thirdPersonDistance + glm::vec3(0, thirdPersonHeight, 0);
+        glm::vec3 cameraTarget = drone.GetPosition() + glm::vec3(0, 1.0f, 0); // Look at the drone's eye level
+
+        camera->Set(cameraPos, cameraTarget, glm::vec3(0, 1, 0));
+    }
 
     // Render the drone
     drone.Render(camera->GetViewMatrix(), projectionMatrix);
@@ -375,9 +380,16 @@ void Tema2::OnInputUpdate(float deltaTime, int mods)
 
 void Tema2::OnKeyPress(int key, int mods)
 {
-    // Add key press event
-    if (key == GLFW_KEY_T)
-    {
+    // Switch to First-Person Camera when '1' is pressed
+    if (key == GLFW_KEY_1) {
+        currentCameraMode = FIRST_PERSON;
+        std::cout << "Switched to First-Person Camera.\n";
+    }
+
+    // Switch to Third-Person Camera when '3' is pressed
+    if (key == GLFW_KEY_3) {
+        currentCameraMode = THIRD_PERSON;
+        std::cout << "Switched to Third-Person Camera.\n";
     }
 
 }
@@ -393,18 +405,47 @@ void Tema2::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
 {
     // Add mouse move event
 
-    // **Rotate the drone based on mouse movement for looking around**
     if (window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
     {
         float sensivityOX = 0.1f; // Adjust sensitivity as needed
         float sensivityOY = 0.1f;
 
-        // Rotate the drone's yaw (rotationY) based on horizontal mouse movement
-        float yawChange = -sensivityOY * deltaX;
-        drone.RotateRight(yawChange);
+        if (currentCameraMode == FIRST_PERSON) {
+            // Rotate the drone's yaw based on horizontal mouse movement
+            float yawChange = -sensivityOY * deltaX;
+            drone.RotateRight(yawChange);
+        }
+        else if (currentCameraMode == THIRD_PERSON) {
+            // Orbit the camera around the drone
+            // Calculate horizontal and vertical angles based on mouse movement
+            float horizontalAngle = -sensivityOY * deltaX;
+            float verticalAngle = -sensivityOX * deltaY;
 
-        // Optionally, implement pitch rotation by adjusting the camera's up vector or the drone's orientation.
-        // This example only rotates yaw for simplicity.
+            // Rotate the camera's position around the drone
+            // Convert current camera position to spherical coordinates relative to the drone
+            glm::vec3 direction = camera->GetTargetPosition() - drone.GetPosition();
+            float distance = glm::length(direction);
+            float theta = atan2(direction.x, direction.z);
+            float phi = acos(direction.y / distance);
+
+            // Update angles based on mouse movement
+            theta += glm::radians(horizontalAngle);
+            phi += glm::radians(verticalAngle);
+
+            // Clamp phi to avoid flipping
+            phi = glm::clamp(phi, 0.1f, glm::pi<float>() - 0.1f);
+
+            // Convert back to Cartesian coordinates
+            direction.x = distance * sin(phi) * sin(theta);
+            direction.y = distance * cos(phi);
+            direction.z = distance * sin(phi) * cos(theta);
+
+            // Update camera position
+            glm::vec3 newCameraPos = drone.GetPosition() + direction;
+            glm::vec3 newCameraTarget = drone.GetPosition() + glm::vec3(0, 1.0f, 0); // Look at drone's eye level
+
+            camera->Set(newCameraPos, newCameraTarget, glm::vec3(0, 1, 0));
+        }
     }
 }
 

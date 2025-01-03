@@ -65,10 +65,18 @@ namespace m1
 
          Drone drone;
          Terrain terrain;
-         
+
          glm::vec3 dronePrevPos;
 
          std::vector<Obstacle*> obstacles; // Vector to store obstacles
+
+      // **Camera Mode Enumeration**
+        enum CameraMode { FIRST_PERSON, THIRD_PERSON };
+        CameraMode currentCameraMode = FIRST_PERSON; // Default mode
+
+        // **Third-Person Camera Offsets**
+        float thirdPersonDistance = 5.0f; // Distance behind the drone
+        float thirdPersonHeight = 2.0f;   // Height above the drone
 
      protected:
         implemented::CameraT2 *camera;

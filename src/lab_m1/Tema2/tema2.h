@@ -13,11 +13,25 @@
 #include <random>
 #include <ctime>
 
+#include <map>
+#include <string>
+#include <glm/glm.hpp>
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 #define Z_FAR		(200.f)
 #define Z_NEAR		(.01f)
 
 namespace m1
 {
+   // Structure to hold character information for text rendering
+    struct Character {
+        GLuint TextureID;   // Texture ID handle
+        glm::ivec2 Size;    // Size of glyph
+        glm::ivec2 Bearing; // Offset from baseline to left/top of glyph
+        GLuint Advance;     // Offset to advance to next glyph
+    };
+
    class Obstacle; 
 
     class Tema2 : public gfxc::SimpleScene
@@ -83,6 +97,15 @@ namespace m1
         float thirdPersonDistance = 5.0f; // Distance behind the drone
         float thirdPersonHeight = 2.0f;   // Height above the drone
 
+         // **Text Rendering Components**
+        std::map<GLchar, Character> Characters; // Holds all characters
+        GLuint VAO_text, VBO_text;              // Vertex Array Object and Vertex Buffer Object for text rendering
+        Shader* textShader;                     // Shader used for text rendering
+
+        // **Timer Variables**
+        float totalTime = 120.0f;   // Total time in seconds (e.g., 2 minutes)
+        float remainingTime = 120.0f; // Remaining time in seconds
+
      protected:
         implemented::CameraT2 *camera;
         glm::mat4 projectionMatrix;
@@ -91,6 +114,9 @@ namespace m1
       void RenderMesh(Mesh *mesh, Shader *shader, const glm::mat4 &modelMatrix) override;
       void UpdateCheckpoint();
       void CheckCheckpointCollisions();
+
+      // RenderText Function
+        void RenderText(std::string text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color);
 
     };
 }   // namespace m1

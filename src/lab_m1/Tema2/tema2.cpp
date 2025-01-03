@@ -86,6 +86,28 @@ Tema2::~Tema2()
 
     // Clean up camera
     delete camera;
+
+    // Clean up checkpoints
+    for(auto& checkpoint : checkpoints)
+    {
+        delete checkpoint;
+    }
+    checkpoints.clear(); for(auto& checkpoint : checkpoints)
+    {
+        delete checkpoint;
+    }
+    checkpoints.clear();
+
+    // Clean up character textures
+    for (auto& c : Characters)
+    {
+        glDeleteTextures(1, &c.second.TextureID);
+    }
+
+    // Clean up text VAO and VBO
+    glDeleteVertexArrays(1, &VAO_text);
+    glDeleteBuffers(1, &VBO_text);
+
 }
 
 
@@ -198,6 +220,106 @@ void Tema2::Init()
         shaders[uiShader->GetName()] = uiShader;
     }
 
+    {
+        Shader* textShader = new Shader("TextShader");
+        textShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "TextVertexShader.glsl"), GL_VERTEX_SHADER);
+        textShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "TextFragmentShader.glsl"), GL_FRAGMENT_SHADER);
+        if (!textShader->CreateAndLink())
+        {
+            std::cerr << "Failed to create and link TextShader.\n";
+        }
+        shaders[textShader->GetName()] = textShader;
+
+        // Set projection matrix for TextShader
+        textShader->Use();
+        glm::mat4 textProjection = glm::ortho(0.0f, static_cast<GLfloat>(window->GetResolution().x), 
+                                       static_cast<GLfloat>(window->GetResolution().y), 0.0f, 
+                                       -1.0f, 1.0f);
+        glUniformMatrix4fv(glGetUniformLocation(textShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(textProjection));
+
+        // Initialize model matrix to identity (can be adjusted if needed)
+        glm::mat4 textModel = glm::mat4(1.0f);
+        glUniformMatrix4fv(glGetUniformLocation(textShader->GetProgramID(), "model"), 1, GL_FALSE, glm::value_ptr(textModel));
+    }
+
+     // Initialize FreeType and load font
+    {
+        // Initialize FreeType library
+        FT_Library ft;
+        if (FT_Init_FreeType(&ft)) {
+            std::cerr << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
+        }
+
+        // Load font as face
+        std::string fontPath = PATH_JOIN(window->props.selfDir, RESOURCE_PATH::FONTS, "Hack-Bold.ttf");
+        FT_Face face;
+        if (FT_New_Face(ft, fontPath.c_str(), 0, &face)) {
+            std::cerr << "ERROR::FREETYPE: Failed to load font at " << fontPath << std::endl;
+        }
+
+        // Set size to load glyphs as
+        FT_Set_Pixel_Sizes(face, 0, 48); // Font size 48, adjust as needed
+
+        // Disable byte-alignment restriction
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1); 
+
+        // Load first 128 characters of ASCII set
+        for (GLubyte c = 0; c < 128; c++) {
+            // Load character glyph 
+            if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+                std::cerr << "ERROR::FREETYPE: Failed to load Glyph for character '" << c << "'\n";
+                continue;
+            }
+
+            // Generate texture
+            GLuint texture;
+            glGenTextures(1, &texture);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_RED,
+                face->glyph->bitmap.width,
+                face->glyph->bitmap.rows,
+                0,
+                GL_RED,
+                GL_UNSIGNED_BYTE,
+                face->glyph->bitmap.buffer
+            );
+
+            // Set texture options
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            // Now store character for later use
+            Character character = {
+                texture,
+                glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+                glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+                static_cast<GLuint>(face->glyph->advance.x)
+            };
+            Characters.insert(std::pair<GLchar, Character>(c, character));
+        }
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        // Destroy FreeType once we're finished
+        FT_Done_Face(face);
+        FT_Done_FreeType(ft);
+
+        // Configure VAO/VBO for texture quads
+        glGenVertexArrays(1, &VAO_text);
+        glGenBuffers(1, &VBO_text);
+        glBindVertexArray(VAO_text);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO_text);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+
     // Set up orthographic projection for UI
     {
         float orthoLeft = 0.0f;
@@ -289,6 +411,9 @@ void Tema2::Init()
     // Highlight the first checkpoint
     UpdateCheckpoint();
 
+    // Enable blending for text rendering
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void Tema2::FrameStart()
@@ -434,6 +559,15 @@ void Tema2::Update(float deltaTimeSeconds)
         std::cout << "Drone position reset to prevent passing through obstacle.\n";
     }
 
+    // **Update Timer**
+    remainingTime -= deltaTimeSeconds;
+    if (remainingTime < 0.0f) {
+        remainingTime = 0.0f;
+        // Handle game over logic here
+        std::cout << "Time's up! Game Over.\n";
+        // Example: Reset drone position, reset checkpoints, reset timer, etc.
+    }
+
     // Render Indicator Arrow
     if (currentCheckpointIndex < checkpoints.size())
     {
@@ -485,7 +619,16 @@ void Tema2::Update(float deltaTimeSeconds)
         }
     }
 
- 
+    // **Render Remaining Time as Text**
+    {
+        std::string timeText = "Time Remaining: " + std::to_string(static_cast<int>(remainingTime)) + "s";
+        GLfloat x = 25.0f; // 25 pixels from left
+        GLfloat y = window->GetResolution().y - 50.0f; // 50 pixels from top
+        GLfloat scale = 1.0f; // Adjust scale as needed
+        glm::vec3 textColor(1.0f, 1.0f, 1.0f); // White
+
+        RenderText(timeText, x, y, scale, textColor);
+    }
 }
 
 
@@ -659,6 +802,26 @@ void Tema2::OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY)
 
 void Tema2::OnWindowResize(int width, int height)
 {
+    // Update projection matrix for 3D rendering
+    projectionMatrix = glm::perspective(RADIANS(60), static_cast<float>(width) / height, Z_NEAR, Z_FAR);
+
+    // Update orthographic projection for UIShader
+    Shader* uiShader = shaders["UIShader"];
+    uiShader->Use();
+    glm::mat4 uiProjection = glm::ortho(0.0f, static_cast<GLfloat>(width), 
+                                       static_cast<GLfloat>(height), 0.0f, 
+                                       -1.0f, 1.0f);
+    glUniformMatrix4fv(glGetUniformLocation(uiShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(uiProjection));
+
+    // Update orthographic projection for TextShader
+    Shader* textShader = shaders["TextShader"];
+    if (textShader) {
+        textShader->Use();
+        glm::mat4 textProjection = glm::ortho(0.0f, static_cast<GLfloat>(window->GetResolution().x), 
+                                       static_cast<GLfloat>(window->GetResolution().y), 0.0f, 
+                                       -1.0f, 1.0f);
+        glUniformMatrix4fv(glGetUniformLocation(textShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(textProjection));
+    }
 }
 
 float Tema2::CalculateDistance(const glm::vec3& a, const glm::vec3& b)
@@ -803,4 +966,56 @@ void Tema2::CheckCheckpointCollisions()
         // Update checkpoint colors
         UpdateCheckpoint();
     }
+}
+
+// RenderText function implementation
+void Tema2::RenderText(std::string text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color)
+{
+    // Activate corresponding render state	
+    Shader* shader = shaders["TextShader"];
+    shader->Use();
+    glUniform3f(glGetUniformLocation(shader->GetProgramID(), "textColor"), color.x, color.y, color.z);
+    glUniform1i(glGetUniformLocation(shader->GetProgramID(), "text"), 0); // Set 'text' sampler to texture unit 0
+    glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(VAO_text);
+
+    // Iterate through all characters
+    std::string::const_iterator c;
+    for (c = text.begin(); c != text.end(); c++)
+    {
+        if (Characters.find(*c) == Characters.end()) {
+            std::cerr << "Character '" << *c << "' not found in Characters map.\n";
+            continue;
+        }
+
+        Character ch = Characters[*c];
+
+        GLfloat xpos = x + ch.Bearing.x * scale;
+        GLfloat ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
+
+        GLfloat w = ch.Size.x * scale;
+        GLfloat h = ch.Size.y * scale;
+        // Update VBO for each character
+        GLfloat vertices[6][4] = {
+            { xpos,     ypos + h,   0.0f, 1.0f },            
+            { xpos + w, ypos,       1.0f, 0.0f },
+            { xpos,     ypos,       0.0f, 0.0f },
+
+            { xpos,     ypos + h,   0.0f, 1.0f },
+            { xpos + w, ypos + h,   1.0f, 1.0f },
+            { xpos + w, ypos,       1.0f, 0.0f }
+        };
+        // Render glyph texture over quad
+        glBindTexture(GL_TEXTURE_2D, ch.TextureID);
+        // Update content of VBO memory
+        glBindBuffer(GL_ARRAY_BUFFER, VBO_text);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices); 
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        // Render quad
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // Now advance cursors for next glyph (note that advance is number of 1/64 pixels)
+        x += (ch.Advance >> 6) * scale; // Bitshift by 6 to get value in pixels
+    }
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }

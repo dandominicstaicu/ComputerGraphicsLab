@@ -11,27 +11,44 @@ namespace m1
                float scale)
         : Obstacle(meshes, shaders, shader, position, scale)
     {
-        // Model from OnShape is rotated 90 degrees around the X axis
+        // We'll keep the final transforms in trunkModel and foliageModel
         float rotationAngle = glm::radians(-90.0f);
 
-        // Trunk: Cylinder (brown)
+        // --- Trunk Setup ---
         {
             Mesh* trunkMesh = meshes.at("cylinder");
-            glm::mat4 trunkModel = glm::translate(glm::mat4(1.0f), position);
+            glm::mat4 trunkModel = glm::mat4(1.0f);
+            trunkModel = glm::translate(trunkModel, position);
             trunkModel = glm::rotate(trunkModel, rotationAngle, glm::vec3(1.f, 0.f, 0.f));
             trunkModel = glm::scale(trunkModel, glm::vec3(scale * 0.2f, scale * 0.2f, scale * 0.38f));
+            
             components.emplace_back(trunkMesh, trunkModel);
             componentColors.emplace_back(glm::vec3(0.55f, 0.27f, 0.07f)); // Brown
+
+            // Approx local bounding box for a unit cylinder
+            trunkBox.localMin = glm::vec3(-0.05f, -0.05f, -0.0f);
+            trunkBox.localMax = glm::vec3( 0.05f,  0.05f,  0.25f);
+
+            // Update to get worldMin/worldMax
+            trunkBox.Update(trunkModel);
         }
 
-        // Foliage: Cone (green)
+        // --- Foliage Setup ---
         {
             Mesh* foliageMesh = meshes.at("cones");
-            glm::mat4 foliageModel = glm::translate(glm::mat4(1.0f), position + glm::vec3(0.0f, scale * 0.09f, 0.0f));
+            glm::mat4 foliageModel = glm::mat4(1.0f);
+            foliageModel = glm::translate(foliageModel, position + glm::vec3(0.0f, scale * 0.09f, 0.0f));
             foliageModel = glm::rotate(foliageModel, rotationAngle, glm::vec3(1.f, 0.f, 0.f));
             foliageModel = glm::scale(foliageModel, glm::vec3(scale, scale, scale));
+
             components.emplace_back(foliageMesh, foliageModel);
             componentColors.emplace_back(glm::vec3(0.f, 0.8f, 0.f)); // Green
+
+            // Approx local bounding box for the double-cone
+            foliageBox.localMin = glm::vec3(-0.05f, -0.05f, -0.0f);
+            foliageBox.localMax = glm::vec3( 0.05f,  0.05f,  0.12f);
+
+            foliageBox.Update(foliageModel);
         }
     }
 
@@ -39,87 +56,43 @@ namespace m1
     {
     }
 
-    bool Tree::CheckCollisionWithSphere(const glm::vec3& sphereCenter, float sphereRadius)
+    // Optional: a helper to visually draw the bounding boxes
+    void Tree::DrawHitboxes(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix)
     {
-        // 1) TRUNK bounding box
-        float trunkHalfX = (scale * 0.2f) * 0.07f;   // x half-extent
-        float trunkHalfZ = (scale * 0.2f) * 0.07;   // z half-extent
-        float trunkHeight = (scale * 0.38f) * 0.25f;        // total height
-        // We place the trunk so that position.y is the bottom, then top is position.y + trunkHeight:
-        glm::vec3 trunkMin = glm::vec3(
-            position.x - trunkHalfX,
-            position.y,
-            position.z - trunkHalfZ
-        );
-        glm::vec3 trunkMax = glm::vec3(
-            position.x + trunkHalfX,
-            position.y + trunkHeight, 
-            position.z + trunkHalfZ
-        );
+        // Ensure the AABBShader is available
+        if (!shaders->count("AABBShader") || !shaders->at("AABBShader")->program) return;
+        Shader* aabbShader = shaders->at("AABBShader");
+        aabbShader->Use();
 
-        // 2) FOLIAGE bounding box 
-        float foliageHalf = scale * 0.5f;  // rough half-extent in X, Z
-        float foliageHeight = scale;       // total height in Y
-        float foliageOffset = scale * 0.09f;
+        // Set the hitbox color to red
+        glUniform3f(glGetUniformLocation(aabbShader->GetProgramID(), "objectColor"), 1.0f, 0.0f, 0.0f); // Red
 
-        glm::vec3 foliageMin = glm::vec3(
-            position.x - foliageHalf,
-            position.y + foliageOffset,  // offset upward
-            position.z - foliageHalf
-        );
-        glm::vec3 foliageMax = glm::vec3(
-            position.x + foliageHalf,
-            position.y + foliageOffset + foliageHeight,
-            position.z + foliageHalf
-        );
+        // Function to draw a single hitbox
+        auto DrawBox = [&](const Hitbox& box)
+        {
+            glm::vec3 size = box.worldMax - box.worldMin;
+            glm::vec3 center = (box.worldMax + box.worldMin) * 0.5f;
 
-        // Now we check collision with trunk box AND foliage box
-        bool collTrunk = CheckSphereAABB(sphereCenter, sphereRadius, trunkMin, trunkMax);
-        bool collFoliage = CheckSphereAABB(sphereCenter, sphereRadius, foliageMin, foliageMax);
+            glm::mat4 modelBox = glm::mat4(1.0f);
+            modelBox = glm::translate(modelBox, center);
+            modelBox = glm::scale(modelBox, size);
 
-        return (collTrunk || collFoliage);
-    }
+            glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "model"), 1, GL_FALSE, glm::value_ptr(modelBox));
+            glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+            glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-    std::vector<std::pair<glm::vec3, glm::vec3>> Tree::GetAABBs() const
-    {
-        std::vector<std::pair<glm::vec3, glm::vec3>> aabbs;
+            // Enable wireframe mode for hitbox visualization
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        // TRUNK bounding box
-        float trunkHalfX = (scale * 0.2f) * 0.07f;   // x half-extent
-        float trunkHalfZ = (scale * 0.2f) * 0.07f;   // z half-extent
-        float trunkHeight = (scale * 0.38f) * 0.25f; // total height
+            // Render the cube hitbox
+            meshes->at("cube")->Render();
 
-        glm::vec3 trunkMin = glm::vec3(
-            position.x - trunkHalfX,
-            position.y,
-            position.z - trunkHalfZ
-        );
-        glm::vec3 trunkMax = glm::vec3(
-            position.x + trunkHalfX,
-            position.y + trunkHeight,
-            position.z + trunkHalfZ
-        );
+            // Restore to fill mode
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        };
 
-        aabbs.emplace_back(trunkMin, trunkMax);
-
-        // FOLIAGE bounding box
-        float foliageHalf = scale * 0.05f;  // half-extent in X, Z
-        float foliageHeight = scale * 0.115;       // height in Y
-        float foliageOffset = scale * 0.09f;
-
-        glm::vec3 foliageMin = glm::vec3(
-            position.x - foliageHalf,
-            position.y + foliageOffset,
-            position.z - foliageHalf
-        );
-        glm::vec3 foliageMax = glm::vec3(
-            position.x + foliageHalf,
-            position.y + foliageOffset + foliageHeight,
-            position.z + foliageHalf
-        );
-
-        aabbs.emplace_back(foliageMin, foliageMax);
-
-        return aabbs;
+        // Draw trunk and foliage hitboxes
+        DrawBox(trunkBox);
+        DrawBox(foliageBox);
     }
 }

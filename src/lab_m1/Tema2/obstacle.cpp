@@ -8,8 +8,10 @@ namespace m1
                        Shader* shader,
                        const glm::vec3& position,
                        float scale)
-        : shader(shader)
-        , position(position)
+        : meshes(&meshes)  
+        , shaders(&shaders)
+        , shader(shader)  
+        , position(position)   
         , scale(scale)
     {
         // Base class does NOT set up any specific mesh geometry.

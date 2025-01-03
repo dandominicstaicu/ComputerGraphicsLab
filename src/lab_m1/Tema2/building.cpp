@@ -1,4 +1,6 @@
 #include "lab_m1/Tema2/building.h"
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace m1
 {
@@ -9,55 +11,58 @@ namespace m1
                        float scale)
         : Obstacle(meshes, shaders, shader, position, scale)
     {
-        // Use "box" to represent the building
         Mesh* boxMesh = meshes.at("box");
 
-        glm::mat4 buildingModel = glm::translate(glm::mat4(1.0f), position);
+        glm::mat4 buildingModel = glm::mat4(1.0f);
+        buildingModel = glm::translate(buildingModel, position);
         buildingModel = glm::scale(buildingModel, glm::vec3(scale * 0.35f));
 
         components.emplace_back(boxMesh, buildingModel);
         componentColors.emplace_back(glm::vec3(0.5f, 0.5f, 0.5f));
+
+        // Local bounding box for a 1x1x1 “box.obj”
+        buildingBox.localMin = glm::vec3(-0.5f);
+        buildingBox.localMax = glm::vec3( 0.5f);
+
+        // Now reflect the model transform
+        buildingBox.Update(buildingModel);
     }
 
     Building::~Building()
     {
     }
 
-    bool Building::CheckCollisionWithSphere(const glm::vec3& sphereCenter, float sphereRadius)
+    void Building::DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix)
     {
-        // Half-size in each dimension of the final scaled building
-        float halfSize = (scale * 0.35f) * 0.5f * 0.35f;
-        
-        // Build AABB
-        glm::vec3 boxMin = position - glm::vec3(halfSize);
-        glm::vec3 boxMax = position + glm::vec3(halfSize);
+        // Ensure the AABBShader is available
+        if (!shaders->count("AABBShader") || !shaders->at("AABBShader")->program) return;
+        Shader* aabbShader = shaders->at("AABBShader");
+        aabbShader->Use();
 
-        // Check collision
-        return CheckSphereAABB(sphereCenter, sphereRadius, boxMin, boxMax);
+        // Set the hitbox color to red
+        glUniform3f(glGetUniformLocation(aabbShader->GetProgramID(), "objectColor"), 1.0f, 0.0f, 0.0f); // Red
+
+        // Calculate size and center of the hitbox
+        glm::vec3 size = buildingBox.worldMax - buildingBox.worldMin;
+        glm::vec3 center = (buildingBox.worldMax + buildingBox.worldMin) * 0.5f;
+
+        // Create the model matrix for the hitbox
+        glm::mat4 modelBox = glm::mat4(1.0f);
+        modelBox = glm::translate(modelBox, center);
+        modelBox = glm::scale(modelBox, size);
+
+        // Set the uniforms
+        glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "model"), 1, GL_FALSE, glm::value_ptr(modelBox));
+        glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
+        // Enable wireframe mode for hitbox visualization
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+        // Render the cube hitbox
+        meshes->at("cube")->Render();
+
+        // Restore to fill mode
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
-
-    std::vector<std::pair<glm::vec3, glm::vec3>> Building::GetAABBs() const
-    {
-        std::vector<std::pair<glm::vec3, glm::vec3>> aabbs;
-
-        // Building is represented by a single box
-        float halfSize = (scale * 0.35f) * 0.5f;
-
-        glm::vec3 boxMin = glm::vec3(
-            position.x - halfSize,
-            position.y - halfSize, // y is centered
-            position.z - halfSize
-        );
-        glm::vec3 boxMax = glm::vec3(
-            position.x + halfSize,
-            position.y + halfSize,
-            position.z + halfSize
-        );
-
-        aabbs.emplace_back(boxMin, boxMax);
-
-        return aabbs;
-    }
-
-
 }

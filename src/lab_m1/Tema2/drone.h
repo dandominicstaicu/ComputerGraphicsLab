@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include "components/simple_scene.h"
+#include "lab_m1/Tema2/hitbox.h"
 
 namespace m1
 {
@@ -38,7 +39,9 @@ namespace m1
         // Getters and Setters
         glm::vec3 GetPosition() const;
         void SetPosition(const glm::vec3& position);
-        float GetCollisionRadius() const { return 3.2f; } 
+
+        // The bounding box that we'll check for collisions
+        Hitbox droneBox;
 
     private:
         // Drone properties
@@ -59,5 +62,10 @@ namespace m1
         void RenderBody(const glm::mat4& modelMatrix);
         void RenderPropellers(const glm::mat4& modelMatrix);
         void RenderAxes(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix);
+    
+        // draw hitbox
+        void DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix);
+ 
+    
     };
 } // namespace m1

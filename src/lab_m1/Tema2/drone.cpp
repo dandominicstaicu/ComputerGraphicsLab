@@ -8,7 +8,7 @@
 namespace m1
 {
     Drone::Drone()
-        : rotorAngle(0.0f), position(0.0f, 6.0f, 0.0f), scale(0.1f, 1.0f, 0.1f), rotationY(0.0f), shader(nullptr), parent(nullptr)
+        : rotorAngle(0.0f), position(1.5f), scale(0.1f, 1.0f, 0.1f), rotationY(0.0f), shader(nullptr), parent(nullptr)
     {
     }
 
@@ -27,7 +27,9 @@ namespace m1
         shader = droneShader;
         parent = parentInstance;
 
-        // Additional initialization if necessary
+        // Initialize the drone's bounding box (assuming unit box for example)
+        droneBox.localMin = glm::vec3(-1.65f, -0.2f, -1.65f);
+        droneBox.localMax = glm::vec3( 1.65f,  0.6f,  1.65f);
     }
 
     void Drone::Update(float deltaTimeSeconds)
@@ -40,22 +42,28 @@ namespace m1
 
     void Drone::Render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix)
     {
-        if (!shader || !shader->program)
-            return;
-
+        if (!shader || !shader->program) return;
         shader->Use();
+
         glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
         glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-        // Create the model matrix
+        // Compute the drone’s model matrix
         glm::mat4 modelMatrix = glm::mat4(1.0f);
         modelMatrix = glm::translate(modelMatrix, position);
         modelMatrix = glm::rotate(modelMatrix, glm::radians(rotationY), glm::vec3(0, 1, 0));
+        // modelMatrix = glm::scale(modelMatrix, someDroneScale);
 
-        // Render drone components
+        // Update bounding box to world space:
+        droneBox.Update(modelMatrix);
+
+        // Render the actual geometry
         RenderBody(modelMatrix);
         RenderPropellers(modelMatrix);
         // RenderAxes(viewMatrix, projectionMatrix);
+
+        // Draw bounding box for debugging
+        DrawHitbox(viewMatrix, projectionMatrix);
     }
 
     void Drone::RenderBody(const glm::mat4& modelMatrix)
@@ -202,5 +210,39 @@ namespace m1
     void Drone::SetPosition(const glm::vec3& pos)
     {
         position = pos;
+    }
+
+    void Drone::DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix)
+    {
+        // Ensure the AABBShader is available
+        if (!shaders.count("AABBShader") || !shaders.at("AABBShader")->program) return;
+        Shader* aabbShader = shaders.at("AABBShader");
+        aabbShader->Use();
+
+        // Set the hitbox color to red
+        glUniform3f(glGetUniformLocation(aabbShader->GetProgramID(), "objectColor"), 1.0f, 0.0f, 0.0f); // Red
+
+        // Calculate size and center of the hitbox
+        glm::vec3 size = droneBox.worldMax - droneBox.worldMin;
+        glm::vec3 center = (droneBox.worldMax + droneBox.worldMin) * 0.5f;
+
+        // Create the model matrix for the hitbox
+        glm::mat4 modelBox = glm::mat4(1.0f);
+        modelBox = glm::translate(modelBox, center);
+        modelBox = glm::scale(modelBox, size);
+
+        // Set the uniforms
+        glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "model"), 1, GL_FALSE, glm::value_ptr(modelBox));
+        glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(aabbShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
+        // Enable wireframe mode for hitbox visualization
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+        // Render the cube hitbox
+        parent->RenderMesh(meshes["cube"], aabbShader, modelBox);
+
+        // Restore to fill mode
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 }

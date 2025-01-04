@@ -98,9 +98,19 @@ namespace m1
         float totalTime = 120.0f;   // Total time in seconds (e.g., 2 minutes)
         float remainingTime = 120.0f; // Remaining time in seconds
 
-     protected:
-        implemented::CameraT2 *camera;
-        glm::mat4 projectionMatrix;
+      // Minimap camera
+      implemented::CameraT2* minimapCamera = nullptr;
+
+      // Minimap projection matrix
+      glm::mat4 minimapProjectionMatrix;
+
+      void RenderMinimap();
+      void RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix);
+      
+
+   protected:
+      implemented::CameraT2 *camera;
+      glm::mat4 projectionMatrix;
 
    public:
       void RenderMesh(Mesh *mesh, Shader *shader, const glm::mat4 &modelMatrix) override;

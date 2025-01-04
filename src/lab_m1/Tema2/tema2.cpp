@@ -81,6 +81,12 @@ void Tema2::Init()
         meshes[ring->GetMeshID()] = ring;
     }
 
+    // Create a small cube to represent the drone on the minimap
+    {
+        Mesh* minimapDrone = m1::CreateCube("minimap_drone");
+        meshes[minimapDrone->GetMeshID()] = minimapDrone;
+    }
+
     // Load Shaders
     {
         Shader* droneShader = new Shader("DroneShader");
@@ -136,6 +142,18 @@ void Tema2::Init()
             std::cerr << "Failed to create and link UIShader.\n";
         }
         shaders[uiShader->GetName()] = uiShader;
+    }
+
+    // Load Minimap Shader
+    {
+        Shader* minimapShader = new Shader("MinimapShader");
+        minimapShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "MinimapVertexShader.glsl"), GL_VERTEX_SHADER);
+        minimapShader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema2", "shaders", "MinimapFragmentShader.glsl"), GL_FRAGMENT_SHADER);
+        if (!minimapShader->CreateAndLink())
+        {
+            std::cerr << "Failed to create and link MinimapShader.\n";
+        }
+        shaders[minimapShader->GetName()] = minimapShader;
     }
 
     // Initialize UI Manager
@@ -234,6 +252,31 @@ void Tema2::Init()
     // Enable blending for text rendering
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Create Minimap Camera
+    minimapCamera = new implemented::CameraT2();
+
+    // We'll set its position/update it every frame based on drone's position,
+    // but initialize it here for clarity:
+    // Something like starting above origin, looking straight down:
+    glm::vec3 minimapStartPos = glm::vec3(0, 50, 0);  
+    glm::vec3 minimapCenter   = glm::vec3(0, 0, 0);    // Look at origin
+    glm::vec3 minimapUp       = glm::vec3(0, 0, -1);   // "Up" for camera is -Z, so that Y is downward
+
+    minimapCamera->Set(minimapStartPos, minimapCenter, minimapUp);
+
+    // For an orthographic projection:
+    float miniMapSize = 50.0f;  // half-extends for left, right, bottom, top
+    float nearPlane   = 0.1f;
+    float farPlane    = 200.0f;
+    minimapProjectionMatrix = glm::ortho(
+        -miniMapSize,   // left
+         miniMapSize,   // right
+        -miniMapSize,   // bottom
+         miniMapSize,   // top
+         nearPlane,
+         farPlane
+    );
 }
 
 void Tema2::FrameStart()
@@ -403,14 +446,13 @@ void Tema2::Update(float deltaTimeSeconds)
         }
     }
 
-    // Re-enable depth testing if needed
-    // glEnable(GL_DEPTH_TEST);
+    RenderMinimap();
 }
 
 
 void Tema2::FrameEnd()
 {
-    DrawCoordinateSystem(camera->GetViewMatrix(), projectionMatrix);
+    // DrawCoordinateSystem(camera->GetViewMatrix(), projectionMatrix);
 }
 
 
@@ -723,3 +765,93 @@ void Tema2::CheckCheckpointCollisions()
         UpdateCheckpoint();
     }
 }
+
+void Tema2::RenderMinimap()
+{
+    // --- A) Position the minimap camera above the drone ---
+    glm::vec3 dronePos = drone.GetPosition();
+    float minimapHeight = 60.0f;  // Height above the drone
+
+    // Set minimap camera position directly above the drone, looking straight down
+    glm::vec3 topViewPos   = glm::vec3(dronePos.x, dronePos.y + minimapHeight, dronePos.z);
+    glm::vec3 topViewFw    = glm::vec3(0, -1, 0);  // Pointing downward
+    glm::vec3 topViewUp    = glm::vec3(0, 0, -1);  // "Up" is -Z to align with minimap orientation
+
+    minimapCamera->Set(topViewPos, topViewPos + topViewFw, topViewUp);
+
+    // --- B) Configure a smaller viewport in the top-right corner ---
+    glm::ivec2 resolution = window->GetResolution();
+    int miniMapWidth  = resolution.x / 4;  // Quarter of the window's width
+    int miniMapHeight = resolution.y / 4;  // Quarter of the window's height
+    int miniMapX = resolution.x - miniMapWidth - 10;  // 10 pixels padding from the edge
+    int miniMapY = resolution.y - miniMapHeight - 10; // 10 pixels padding from the edge
+
+    glViewport(miniMapX, miniMapY, miniMapWidth, miniMapHeight);
+
+    // --- C) Clear only the depth buffer for the minimap pass ---
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    // --- D) Render the terrain on the minimap ---
+    RenderMesh(terrain.GetMesh(), shaders["TerrainShader"], glm::mat4(1), minimapCamera->GetViewMatrix(), minimapProjectionMatrix);
+
+    // --- E) Render all checkpoints on the minimap ---
+    for (Checkpoint* checkpoint : checkpoints)
+    {
+        glm::vec3 checkpointPos = checkpoint->GetPosition();
+
+        // Create a model matrix for the checkpoint
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(checkpointPos.x, checkpointPos.y, checkpointPos.z));
+        model = glm::scale(model, glm::vec3(1.0f)); // Adjust scale if necessary
+
+        // Render the checkpoint ring with thicker lines
+        glLineWidth(3.0f);
+        checkpoint->Render(
+            minimapCamera->GetViewMatrix(),
+            minimapProjectionMatrix,
+            meshes["ring"],
+            shaders["ObstacleShader"],
+            shaders["AABBShader"],
+            meshes["cube"]
+        );
+        glLineWidth(1.0f);
+    }
+
+    // --- F) Render the drone on the minimap as a small cube ---
+    {
+        // Create the model matrix: position the drone on the minimap's ground plane
+        glm::mat4 droneModel = glm::mat4(1.0f);
+        droneModel = glm::translate(droneModel, glm::vec3(dronePos.x, 0.0f, dronePos.z)); // Y=0 for ground plane
+        droneModel = glm::scale(droneModel, glm::vec3(5.0f, 15.0f, 5.0f)); // Scale the cube
+
+        // Use the MinimapShader
+        Shader* minimapShader = shaders["MinimapShader"];
+        minimapShader->Use();
+
+        // Set the drone color (e.g., green)
+        glm::vec3 minimapDroneColor(0.0f, 0.0f, 0.0f); // Green
+        glUniform3fv(glGetUniformLocation(minimapShader->GetProgramID(), "color"), 1, glm::value_ptr(minimapDroneColor));
+
+        // Render the minimap drone
+        RenderMesh(meshes["minimap_drone"], minimapShader, droneModel, minimapCamera->GetViewMatrix(), minimapProjectionMatrix);
+    }
+
+    // --- G) Optionally, render other elements like obstacles on the minimap ---
+
+    // Restore the main viewport
+    glViewport(0, 0, resolution.x, resolution.y);
+}
+
+void Tema2::RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix)
+{
+    if (!mesh || !shader || !shader->program)
+        return;
+
+    shader->Use();
+    glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+    glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+    glUniformMatrix4fv(glGetUniformLocation(shader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
+    mesh->Render();
+}
+

@@ -1,7 +1,5 @@
-// checkpoint.cpp
 #include "checkpoint.h"
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+
 
 namespace m1
 {
@@ -93,11 +91,6 @@ namespace m1
         // Render the ring mesh
         ringMesh->Render();
 
-        // **Render Hitbox for Debugging**
-        // // Only if AABBShader and cube mesh are provided
-        // if (aabbShader && aabbShader->program && cubeMesh)
-        // {
-        //     DrawHitbox(viewMatrix, projectionMatrix, cubeMesh, aabbShader);
-        // }
+
     }
 }

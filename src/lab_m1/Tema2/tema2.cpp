@@ -338,19 +338,23 @@ void Tema2::Update(float deltaTimeSeconds)
         std::cerr << "Cube mesh not found!\n";
 
     // Render Checkpoints
+    for (size_t i = 0; i < checkpoints.size(); ++i)
     {
-        for (size_t i = 0; i < checkpoints.size(); ++i)
-        {
-            Checkpoint* checkpoint = checkpoints[i];
+        Checkpoint* checkpoint = checkpoints[i];
 
-            // Retrieve the shaders used for checkpoints
-            Shader* checkpointShader = shaders["ObstacleShader"]; // Using ObstacleShader for rendering
-            Shader* aabbShader = shaders["AABBShader"];
+        // Retrieve the shaders used for checkpoints
+        Shader* checkpointShader = shaders["ObstacleShader"]; // Using ObstacleShader for rendering
+        Shader* aabbShader = shaders["AABBShader"];
 
-            // Render the checkpoint, passing the cubeMesh
-            checkpoint->Render(camera->GetViewMatrix(), projectionMatrix, ringMesh, checkpointShader, aabbShader, cubeMesh);
+        // Render the checkpoint, passing the cubeMesh
+        checkpoint->Render(camera->GetViewMatrix(), projectionMatrix, ringMesh, checkpointShader, aabbShader, cubeMesh);
+
+        // **Conditionally Render Hitbox**
+        if (showHitboxes) {
+            checkpoint->DrawHitbox(camera->GetViewMatrix(), projectionMatrix, cubeMesh, aabbShader);
         }
     }
+    
 
     // Render the drone
     drone.Render(camera->GetViewMatrix(), projectionMatrix);
@@ -790,7 +794,7 @@ void Tema2::CheckCheckpointCollisions()
 
 void Tema2::RenderMinimap()
 {
-    // --- A) Position the minimap camera above the drone ---
+    // --- Position the minimap camera above the drone ---
     glm::vec3 dronePos = drone.GetPosition();
     float minimapHeight = 60.0f;  // Height above the drone
 
@@ -801,7 +805,7 @@ void Tema2::RenderMinimap()
 
     minimapCamera->Set(topViewPos, topViewPos + topViewFw, topViewUp);
 
-    // --- B) Configure a smaller viewport in the top-right corner ---
+    // --- Configure a smaller viewport in the top-right corner ---
     glm::ivec2 resolution = window->GetResolution();
     int miniMapWidth  = resolution.x / 4;  // Quarter of the window's width
     int miniMapHeight = resolution.y / 4;  // Quarter of the window's height
@@ -810,36 +814,36 @@ void Tema2::RenderMinimap()
 
     glViewport(miniMapX, miniMapY, miniMapWidth, miniMapHeight);
 
-    // --- C) Clear only the depth buffer for the minimap pass ---
+    // ---  Clear only the depth buffer for the minimap pass ---
     glClear(GL_DEPTH_BUFFER_BIT);
 
-    // --- D) Render the terrain on the minimap ---
+    // ---  Render the terrain on the minimap ---
     RenderMesh(terrain.GetMesh(), shaders["TerrainShader"], glm::mat4(1), minimapCamera->GetViewMatrix(), minimapProjectionMatrix);
 
-    // --- E) Render all checkpoints on the minimap ---
+    // ---  Render all checkpoints on the minimap ---
     for (Checkpoint* checkpoint : checkpoints)
     {
         glm::vec3 checkpointPos = checkpoint->GetPosition();
 
         // Create a model matrix for the checkpoint
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(checkpointPos.x, checkpointPos.y, checkpointPos.z));
-        model = glm::scale(model, glm::vec3(1.0f)); // Adjust scale if necessary
+        model = glm::translate(model, glm::vec3(checkpointPos.x, 0.0f, checkpointPos.z)); // Render at ground level
+        model = glm::scale(model, glm::vec3(25.0f, 25.0f, 25.0f)); // Make the symbol larger on the minimap
 
-        // Render the checkpoint ring with thicker lines
-        glLineWidth(3.0f);
-        checkpoint->Render(
-            minimapCamera->GetViewMatrix(),
-            minimapProjectionMatrix,
-            meshes["ring"],
-            shaders["ObstacleShader"],
-            shaders["AABBShader"],
-            meshes["cube"]
-        );
-        glLineWidth(1.0f);
+        // Use the ObstacleShader for rendering
+        Shader* obstacleShader = shaders["ObstacleShader"];
+        obstacleShader->Use();
+
+        // Set a distinct color for the checkpoint
+        glm::vec3 checkpointColor = checkpoint->GetColor(); // Yellow for visibility
+        glUniform3fv(glGetUniformLocation(obstacleShader->GetProgramID(), "objectColor"), 1, glm::value_ptr(checkpointColor));
+
+        // Render the ring mesh
+        RenderMesh(meshes["ring"], obstacleShader, model, minimapCamera->GetViewMatrix(), minimapProjectionMatrix);
+
     }
 
-    // --- F) Render the drone on the minimap as a small cube ---
+    // ---  Render the drone on the minimap as a small cube ---
     {
         // Create the model matrix: position the drone on the minimap's ground plane
         glm::mat4 droneModel = glm::mat4(1.0f);
@@ -858,7 +862,6 @@ void Tema2::RenderMinimap()
         RenderMesh(meshes["minimap_drone"], minimapShader, droneModel, minimapCamera->GetViewMatrix(), minimapProjectionMatrix);
     }
 
-    // --- G) Optionally, render other elements like obstacles on the minimap ---
 
     // Restore the main viewport
     glViewport(0, 0, resolution.x, resolution.y);

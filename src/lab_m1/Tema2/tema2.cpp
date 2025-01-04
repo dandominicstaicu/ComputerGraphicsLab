@@ -92,10 +92,6 @@ Tema2::~Tema2()
     {
         delete checkpoint;
     }
-    checkpoints.clear(); for(auto& checkpoint : checkpoints)
-    {
-        delete checkpoint;
-    }
     checkpoints.clear();
 
     // Clean up character textures
@@ -107,7 +103,6 @@ Tema2::~Tema2()
     // Clean up text VAO and VBO
     glDeleteVertexArrays(1, &VAO_text);
     glDeleteBuffers(1, &VBO_text);
-
 }
 
 
@@ -568,7 +563,14 @@ void Tema2::Update(float deltaTimeSeconds)
         // Example: Reset drone position, reset checkpoints, reset timer, etc.
     }
 
-    // Render Indicator Arrow
+    // Disable depth testing for UI elements
+    glDisable(GL_DEPTH_TEST);
+    
+    // Ensure blending is enabled
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // **Render Indicator Arrow**
     if (currentCheckpointIndex < checkpoints.size())
     {
         Checkpoint* nextCheckpoint = checkpoints[currentCheckpointIndex];
@@ -591,9 +593,11 @@ void Tema2::Update(float deltaTimeSeconds)
         if (angleDeg < 0)
             angleDeg += 360.0f;
 
-        // Position the arrow at a fixed screen position, e.g., bottom center
-        float arrowSize = 500.0f; // Adjust size as needed
-        glm::vec3 arrowPos = glm::vec3(window->GetResolution().x / 2.0f, 50.0f, 0.0f); // 50 pixels from bottom
+        // Make arrow size responsive
+        float arrowSize = window->GetResolution().y * 0.5f;
+
+        // Position the arrow at the bottom center, 50 pixels from the bottom
+        glm::vec3 arrowPos = glm::vec3(window->GetResolution().x / 2.0f, 50.0f, 0.0f);
 
         // Create model matrix for the arrow
         glm::mat4 arrowModel = glm::mat4(1.0f);
@@ -629,6 +633,9 @@ void Tema2::Update(float deltaTimeSeconds)
 
         RenderText(timeText, x, y, scale, textColor);
     }
+
+    // Re-enable depth testing if needed
+    glEnable(GL_DEPTH_TEST);
 }
 
 
@@ -817,9 +824,9 @@ void Tema2::OnWindowResize(int width, int height)
     Shader* textShader = shaders["TextShader"];
     if (textShader) {
         textShader->Use();
-        glm::mat4 textProjection = glm::ortho(0.0f, static_cast<GLfloat>(window->GetResolution().x), 
-                                       static_cast<GLfloat>(window->GetResolution().y), 0.0f, 
-                                       -1.0f, 1.0f);
+        glm::mat4 textProjection = glm::ortho(0.0f, static_cast<GLfloat>(width), 
+                                               static_cast<GLfloat>(height), 0.0f, 
+                                               -1.0f, 1.0f);
         glUniformMatrix4fv(glGetUniformLocation(textShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(textProjection));
     }
 }

@@ -9,7 +9,7 @@
 #include "lab_m1/Tema2/tree.h"
 #include "lab_m1/Tema2/checkpoint.h"
 #include "lab_m1/Tema2/ui_manager.h"
-
+#include "lab_m1/Tema2/mesh_utils.h"
 
 
 #include <random>

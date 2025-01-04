@@ -1,6 +1,5 @@
 // checkpoint.cpp
 #include "checkpoint.h"
-#include "tema2.h" // To access Tema2's RenderMesh method
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -27,15 +26,15 @@ namespace m1
         // Cleanup if necessary
     }
 
-    void Checkpoint::DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const std::unordered_map<std::string, Mesh*>& meshes, Shader* shader)
+     void Checkpoint::DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const Mesh* cubeMesh, Shader* shader)
     {
         // Ensure the AABBShader and hitbox mesh are available
-        if (!shader || !shader->program)
+        if (!shader || !shader->program || !cubeMesh)
             return;
 
         // Calculate size and center of the hitbox
         glm::vec3 size = hitbox.worldMax - hitbox.worldMin;
-        glm::vec3 center = (hitbox.worldMin + hitbox.worldMax) * 0.5f;
+        glm::vec3 center = (hitbox.worldMax + hitbox.worldMin) * 0.5f;
 
         // Create the model matrix for the hitbox
         glm::mat4 modelBox = glm::mat4(1.0f);
@@ -55,12 +54,50 @@ namespace m1
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
         // Render the cube hitbox
-        if (meshes.find("cube") != meshes.end())
-        {
-            meshes.at("cube")->Render();
-        }
+        cubeMesh->Render();
 
         // Restore to fill mode
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    void Checkpoint::Render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, 
+                            Mesh* ringMesh, Shader* obstacleShader, Shader* aabbShader, Mesh* cubeMesh)
+    {
+        if (!ringMesh || !obstacleShader || !aabbShader || !cubeMesh)
+            return;
+
+        // Set up the model matrix
+        glm::mat4 modelMatrix = glm::mat4(1.0f);
+        modelMatrix = glm::translate(modelMatrix, position);
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(7.0f));
+
+        // Update Hitbox based on the model matrix
+        hitbox.Update(modelMatrix);
+
+        // Set the color uniform
+        obstacleShader->Use(); // Activate the shader before setting uniforms
+        GLint colorLocation = glGetUniformLocation(obstacleShader->GetProgramID(), "objectColor");
+        if(colorLocation == -1) {
+            std::cerr << "Uniform 'objectColor' not found in ObstacleShader!\n";
+        }
+        else {
+            glUniform3fv(colorLocation, 1, glm::value_ptr(color));
+        }
+
+
+        obstacleShader->Use();
+        glUniformMatrix4fv(glGetUniformLocation(obstacleShader->GetProgramID(), "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(obstacleShader->GetProgramID(), "view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(obstacleShader->GetProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
+        // Render the ring mesh
+        ringMesh->Render();
+
+        // **Render Hitbox for Debugging**
+        // Only if AABBShader and cube mesh are provided
+        if (aabbShader && aabbShader->program && cubeMesh)
+        {
+            DrawHitbox(viewMatrix, projectionMatrix, cubeMesh, aabbShader);
+        }
     }
 }

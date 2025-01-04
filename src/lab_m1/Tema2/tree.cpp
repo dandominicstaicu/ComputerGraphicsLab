@@ -57,7 +57,7 @@ namespace m1
     }
 
     // Optional: a helper to visually draw the bounding boxes
-    void Tree::DrawHitboxes(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix)
+    void Tree::DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix)
     {
         // Ensure the AABBShader is available
         if (!shaders->count("AABBShader") || !shaders->at("AABBShader")->program) return;

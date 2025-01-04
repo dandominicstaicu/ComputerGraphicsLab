@@ -22,7 +22,7 @@ namespace m1
         Hitbox foliageBox;
 
         // For debugging/drawing
-        void DrawHitboxes(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix);
+        void DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix);
 
 
     };

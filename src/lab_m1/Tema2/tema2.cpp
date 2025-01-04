@@ -9,45 +9,6 @@ using namespace std;
 using namespace m1;
 
 
-static Mesh* CreateCube(const std::string& name)
-{
-    // A simple unit cube [-0.5..0.5]^3 for each axis
-    std::vector<VertexFormat> vertices =
-    {
-        // Position            // Normal      // Texture
-        VertexFormat(glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(0, 0, 1)), 
-        VertexFormat(glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3(0, 0, 1)), 
-        VertexFormat(glm::vec3( 0.5f,  0.5f,  0.5f), glm::vec3(0, 0, 1)), 
-        VertexFormat(glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(0, 0, 1)), 
-
-        VertexFormat(glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0, 0, -1)), 
-        VertexFormat(glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3(0, 0, -1)), 
-        VertexFormat(glm::vec3( 0.5f,  0.5f, -0.5f), glm::vec3(0, 0, -1)), 
-        VertexFormat(glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(0, 0, -1))  
-    };
-
-    // 12 triangles (36 indices), or as quads grouped by faces
-    std::vector<unsigned int> indices =
-    {
-        // front
-        0, 1, 2,   2, 3, 0,
-        // right
-        1, 5, 6,   6, 2, 1,
-        // back
-        7, 6, 5,   5, 4, 7,
-        // left
-        4, 0, 3,   3, 7, 4,
-        // top
-        3, 2, 6,   6, 7, 3,
-        // bottom
-        4, 5, 1,   1, 0, 4
-    };
-
-    Mesh* cube = new Mesh(name);
-    cube->InitFromData(vertices, indices);
-    return cube;
-}
-
 Tema2::Tema2()
 {
 }
@@ -88,7 +49,7 @@ void Tema2::Init()
 
     // Create our own procedural cube geometry
     {
-        Mesh* cube = CreateCube("cube");
+        Mesh* cube = m1::CreateCube("cube");
         meshes[cube->GetMeshID()] = cube;
     }
 
@@ -320,47 +281,31 @@ void Tema2::Update(float deltaTimeSeconds)
         camera->Set(cameraPos, cameraTarget, glm::vec3(0, 1, 0));
     }
 
+    Mesh* ringMesh = nullptr;
+    Mesh* cubeMesh = nullptr;
+
+    if (meshes.find("ring") != meshes.end())
+        ringMesh = meshes["ring"];
+    else
+        std::cerr << "Ring mesh not found!\n";
+
+    if (meshes.find("cube") != meshes.end())
+        cubeMesh = meshes["cube"];
+    else
+        std::cerr << "Cube mesh not found!\n";
+
     // Render Checkpoints
     {
         for (size_t i = 0; i < checkpoints.size(); ++i)
         {
             Checkpoint* checkpoint = checkpoints[i];
 
-            // Retrieve the shader used for checkpoints
+            // Retrieve the shaders used for checkpoints
             Shader* checkpointShader = shaders["ObstacleShader"]; // Using ObstacleShader for rendering
-
-            // Set up the model matrix
-            glm::mat4 modelMatrix = glm::mat4(1.0f);
-            modelMatrix = glm::translate(modelMatrix, checkpoint->GetPosition());
-
-            // Scale the checkpoint
-            modelMatrix = glm::scale(modelMatrix, glm::vec3(7.0f));
-
-            // **Update Hitbox based on the model matrix**
-            checkpoint->GetHitbox().Update(modelMatrix);
-
-            // Set the color uniform
-            checkpointShader->Use(); // Activate the shader before setting uniforms
-            GLint colorLocation = glGetUniformLocation(checkpointShader->GetProgramID(), "objectColor");
-            if(colorLocation == -1) {
-                std::cerr << "Uniform 'objectColor' not found in ObstacleShader!\n";
-            }
-            else {
-                glUniform3fv(colorLocation, 1, glm::value_ptr(checkpoint->GetColor()));
-            }
-
-            // Render the ring mesh
-            if (meshes.find("ring") != meshes.end())
-            {
-                RenderMesh(meshes["ring"], checkpointShader, modelMatrix);
-            }
-
-            // **Render Hitbox for Debugging**
             Shader* aabbShader = shaders["AABBShader"];
-            if (aabbShader && aabbShader->program && meshes.find("cube") != meshes.end())
-            {
-                checkpoint->DrawHitbox(camera->GetViewMatrix(), projectionMatrix, meshes, aabbShader);
-            }
+
+            // Render the checkpoint, passing the cubeMesh
+            checkpoint->Render(camera->GetViewMatrix(), projectionMatrix, ringMesh, checkpointShader, aabbShader, cubeMesh);
         }
     }
 
@@ -394,7 +339,7 @@ void Tema2::Update(float deltaTimeSeconds)
             }
 
             // Draw hitboxes for debugging
-            tree->DrawHitboxes(camera->GetViewMatrix(), projectionMatrix);
+            tree->DrawHitbox(camera->GetViewMatrix(), projectionMatrix);
         }
         else if (auto building = dynamic_cast<Building*>(obstacle))
         {
@@ -737,9 +682,7 @@ void Tema2::GenerateBuildings(int numBuildings,
             std::cerr << "Failed to place building " << i + 1
                       << " after " << maxPlacementAttempts << " attempts.\n";
         }
-    }
-
-    
+    }   
 }
 
 void Tema2::UpdateCheckpoint()

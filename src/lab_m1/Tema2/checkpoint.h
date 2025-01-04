@@ -7,6 +7,8 @@
 #include "hitbox.h"
 #include "lab_m1/Tema2/hitbox.h"
 
+#include <iostream>
+
 namespace m1
 {
     class Tema2; // Forward declaration
@@ -26,7 +28,11 @@ namespace m1
         void SetColor(const glm::vec3& newColor) { color = newColor; }
         void SetPosition(const glm::vec3& newPosition) { position = newPosition; }
 
-        void DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const std::unordered_map<std::string, Mesh*>& meshes, Shader* shader);
+        void DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const Mesh* cubeMesh, Shader* shader);
+
+        void Render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, 
+                    Mesh* ringMesh, Shader* obstacleShader, Shader* aabbShader, Mesh* cubeMesh);
+
 
     private:
         glm::vec3 position;

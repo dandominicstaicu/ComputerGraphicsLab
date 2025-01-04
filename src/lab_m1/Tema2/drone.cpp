@@ -67,7 +67,7 @@ namespace m1
         // RenderAxes(viewMatrix, projectionMatrix);
 
         // Draw bounding box for debugging
-        DrawHitbox(viewMatrix, projectionMatrix);
+        // DrawHitbox(viewMatrix, projectionMatrix);
     }
 
     void Drone::RenderBody(const glm::mat4& modelMatrix)

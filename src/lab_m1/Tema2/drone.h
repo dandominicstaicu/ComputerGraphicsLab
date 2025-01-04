@@ -46,6 +46,10 @@ namespace m1
         // The bounding box that we'll check for collisions
         Hitbox droneBox;
 
+
+        // draw hitbox
+        void DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix);
+
     private:
         // Drone properties
         float rotorAngle;
@@ -66,9 +70,6 @@ namespace m1
         void RenderPropellers(const glm::mat4& modelMatrix);
         void RenderAxes(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix);
     
-        // draw hitbox
-        void DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix);
- 
     
     };
 } // namespace m1

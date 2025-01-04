@@ -107,6 +107,8 @@ namespace m1
       void RenderMinimap();
       void RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix, const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix);
       
+      // **Add the boolean flag here**
+      bool showHitboxes = false;
 
    protected:
       implemented::CameraT2 *camera;

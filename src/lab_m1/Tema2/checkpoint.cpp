@@ -94,10 +94,10 @@ namespace m1
         ringMesh->Render();
 
         // **Render Hitbox for Debugging**
-        // Only if AABBShader and cube mesh are provided
-        if (aabbShader && aabbShader->program && cubeMesh)
-        {
-            DrawHitbox(viewMatrix, projectionMatrix, cubeMesh, aabbShader);
-        }
+        // // Only if AABBShader and cube mesh are provided
+        // if (aabbShader && aabbShader->program && cubeMesh)
+        // {
+        //     DrawHitbox(viewMatrix, projectionMatrix, cubeMesh, aabbShader);
+        // }
     }
 }

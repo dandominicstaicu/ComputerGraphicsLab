@@ -9,7 +9,7 @@ using namespace std;
 using namespace m1;
 
 
-Tema2::Tema2()
+Tema2::Tema2() : showHitboxes(false)
 {
 }
 
@@ -381,8 +381,12 @@ void Tema2::Update(float deltaTimeSeconds)
                 collisionDetected = true;
             }
 
-            // Draw hitboxes for debugging
-            tree->DrawHitbox(camera->GetViewMatrix(), projectionMatrix);
+            // **Conditionally draw hitboxes**
+            if (showHitboxes) {
+                tree->DrawHitbox(camera->GetViewMatrix(), projectionMatrix);
+            }
+
+
         }
         else if (auto building = dynamic_cast<Building*>(obstacle))
         {
@@ -391,9 +395,16 @@ void Tema2::Update(float deltaTimeSeconds)
                 collisionDetected = true;
             }
 
-            // Draw hitbox for debugging
-            building->DrawHitbox(camera->GetViewMatrix(), projectionMatrix);
+            // **Conditionally draw hitbox**
+            if (showHitboxes) {
+                building->DrawHitbox(camera->GetViewMatrix(), projectionMatrix);
+            }
         }
+    }
+
+    // **Conditionally draw drone's hitbox**
+    if (showHitboxes) {
+        drone.DrawHitbox(camera->GetViewMatrix(), projectionMatrix);
     }
 
     // **Check Collision with Checkpoints**
@@ -536,6 +547,17 @@ void Tema2::OnKeyPress(int key, int mods)
     if (key == GLFW_KEY_3) {
         currentCameraMode = THIRD_PERSON;
         std::cout << "Switched to Third-Person Camera.\n";
+    }
+
+     // hitbox toggle controls
+    if (key == GLFW_KEY_5) { // Show hitboxes
+        showHitboxes = true;
+        std::cout << "Hitboxes enabled.\n";
+    }
+
+    if (key == GLFW_KEY_6) { // Hide hitboxes
+        showHitboxes = false;
+        std::cout << "Hitboxes disabled.\n";
     }
 
 }

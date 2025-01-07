@@ -14,13 +14,12 @@ namespace m1
         , position(position)   
         , scale(scale)
     {
-        // Base class does NOT set up any specific mesh geometry.
-        // Tree/Building classes will do that in their constructors.
+
     }
 
     Obstacle::~Obstacle()
     {
-        // No heap allocations in this example, so nothing special to clean
+
     }
 
     void Obstacle::Render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix)

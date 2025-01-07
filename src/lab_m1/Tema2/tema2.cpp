@@ -427,7 +427,6 @@ void Tema2::Update(float deltaTimeSeconds)
         remainingTime = 0.0f;
         // Handle game over logic here
         std::cout << "Time's up! Game Over.\n";
-        // Example: Reset drone position, reset checkpoints, reset timer, etc.
     }
 
     // **Render UI Elements**
@@ -784,8 +783,7 @@ void Tema2::CheckCheckpointCollisions()
         if (currentCheckpointIndex >= checkpoints.size())
         {
             std::cout << "All checkpoints passed!\n";
-            // Optionally, handle game completion
-            currentCheckpointIndex = 0; // Example: Loop back to first checkpoint
+            currentCheckpointIndex = 0;
         }
         // Update checkpoint colors
         UpdateCheckpoint();

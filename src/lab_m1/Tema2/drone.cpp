@@ -27,7 +27,7 @@ namespace m1
         shader = droneShader;
         parent = parentInstance;
 
-        // Initialize the drone's bounding box (assuming unit box for example)
+        // Initialize the drone's bounding box
         droneBox.localMin = glm::vec3(-1.65f, -0.2f, -1.65f);
         droneBox.localMax = glm::vec3( 1.65f,  0.6f,  1.65f);
     }

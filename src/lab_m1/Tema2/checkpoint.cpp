@@ -21,7 +21,6 @@ namespace m1
 
     Checkpoint::~Checkpoint()
     {
-        // Cleanup if necessary
     }
 
      void Checkpoint::DrawHitbox(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, const Mesh* cubeMesh, Shader* shader)
